@@ -1,0 +1,156 @@
+erDiagram
+    PETSHOPS ||--o{ USUARIOS_PETSHOP : "tem equipe"
+    PETSHOPS ||--o{ SERVICOS : "oferece"
+    PETSHOPS ||--o{ PLANOS : "define"
+    PETSHOPS ||--o{ TUTORES : "atende"
+    PETSHOPS ||--o{ ASSINATURAS : "recebe"
+    PETSHOPS ||--o{ COBRANCAS : "recebe"
+    PETSHOPS ||--o{ MENSALIDADES_PETSHOP : "paga (plataforma)"
+
+    CATEGORIAS_SERVICO ||--o{ SERVICOS : "classifica"
+    SERVICOS ||--o{ PRECOS_SERVICO : "tem preco por porte"
+    PORTES ||--o{ PRECOS_SERVICO : "referencia"
+    PORTES ||--o{ PETS : "classifica"
+    PORTES ||--o{ PLANO_PRECOS : "referencia"
+
+    PLANOS ||--o{ PLANO_SERVICOS : "inclui"
+    SERVICOS ||--o{ PLANO_SERVICOS : "compoe plano"
+    PLANOS ||--o{ PLANO_PRECOS : "precificado por porte"
+
+    TUTORES ||--o{ PETS : "possui"
+    TUTORES ||--o{ CONTATOS_ADICIONAIS : "tem override de contato"
+    TUTORES ||--o{ METODOS_PAGAMENTO : "cadastra cartao"
+    TUTORES ||--o{ ASSINATURAS : "assina"
+    TUTORES ||--o{ LEMBRETES : "recebe (sem agendamento ainda)"
+    PETS ||--o{ ASSINATURAS : "vinculado a"
+    PLANOS ||--o{ ASSINATURAS : "baseada em"
+    METODOS_PAGAMENTO ||--o{ ASSINATURAS : "cobra via"
+
+    ASSINATURAS ||--o{ AGENDAMENTOS : "gera visitas"
+    ASSINATURAS ||--o{ COBRANCAS : "gera cobranca mensal"
+    AGENDAMENTOS ||--o{ COBRANCAS : "1a visita do mes dispara"
+    AGENDAMENTOS ||--o{ LEMBRETES : "dispara"
+
+    PETSHOPS {
+        uuid id PK
+        text nome
+        numeric fee_fixo_mensal "R$ 99,00 (editavel)"
+        numeric percentual_plataforma "0.03 = 3% (editavel)"
+        time hora_abertura "expediente, tudo configuravel"
+        time hora_inicio_intervalo "pausa almoco, se houver"
+        time horario_envio_lembrete "quando manda a 1a confirmacao"
+        time horario_corte_confirmacao_manha
+        time horario_corte_confirmacao_tarde
+        time horario_limite_petshop_tarde
+    }
+
+    PLANOS {
+        uuid id PK
+        uuid petshop_id FK
+        text nome
+        smallint intervalo_dias "7, 14, 30... livre"
+        smallint ocorrencias_padrao_mes "base do preco (ex.: 4 p/ semanal)"
+        boolean ativo
+    }
+
+    PLANO_SERVICOS {
+        uuid plano_id FK
+        uuid servico_id FK
+    }
+
+    PLANO_PRECOS {
+        uuid plano_id FK
+        smallint porte_id FK
+        numeric preco_assinatura "valor fixo cobrado"
+    }
+
+    ASSINATURAS {
+        uuid id PK
+        uuid petshop_id FK
+        uuid tutor_id FK
+        uuid pet_id FK
+        uuid plano_id FK
+        uuid metodo_pagamento_id FK
+        text status "ativa | pausada | cancelada"
+        smallint dia_semana_preferencial "define o dia fixo do ciclo"
+        time horario_preferencial "so usado no 1o agendamento"
+        date proxima_data_agendamento
+        date competencia_paga "mes ja coberto pela cobranca"
+        smallint banhos_restantes_mes "contador do mes pago"
+        text gateway_subscription_id
+    }
+
+    METODOS_PAGAMENTO {
+        uuid id PK
+        uuid tutor_id FK
+        text gateway_payment_method_id "token, nunca o cartao"
+        text bandeira
+        text ultimos_4_digitos
+        boolean padrao
+    }
+
+    TUTORES {
+        uuid id PK
+        uuid petshop_id FK
+        text nome
+        text telefone
+        text endereco "preenchido via link de cadastro"
+        boolean cadastro_completo
+    }
+
+    CONTATOS_ADICIONAIS {
+        uuid id PK
+        uuid tutor_id FK
+        text papel "agendamento|busca_entrega|cobranca"
+        text nome
+        text telefone
+    }
+
+    COBRANCAS {
+        uuid id PK
+        uuid assinatura_id FK
+        uuid agendamento_gatilho_id FK "1a visita do mes"
+        date competencia "mes coberto"
+        smallint quantidade_banhos "ocorrencias reais do mes"
+        numeric valor_total "proporcional: por_visita * qtd"
+        numeric valor_percentual "corte da plataforma"
+        numeric valor_petshop "repassado via split"
+        text status
+    }
+
+    MENSALIDADES_PETSHOP {
+        uuid id PK
+        uuid petshop_id FK
+        date competencia "1 linha por mes"
+        numeric valor "copiado de fee_fixo_mensal"
+        text status "pendente|pago|falhou|isento"
+    }
+
+    PETS {
+        uuid id PK
+        uuid tutor_id FK
+        smallint porte_id FK
+        text nome
+    }
+
+    AGENDAMENTOS {
+        uuid id PK
+        uuid assinatura_id FK
+        timestamptz data_hora
+        text status "agendado|confirmado|pronto|entregue..."
+        timestamptz confirmado_em "preenchido no D-1"
+        timestamptz pronto_em "clique da equipe"
+        timestamptz entregue_em "clique da equipe"
+    }
+
+    LEMBRETES {
+        uuid id PK
+        uuid agendamento_id FK "nulo pra tipo=cadastro"
+        uuid tutor_id FK "usado quando nao ha agendamento"
+        text tipo "confirmacao_agendamento|pet_pronto|cadastro..."
+        text destinatario "tutor | petshop"
+        text papel_destino "agendamento|busca_entrega|cobranca"
+        text canal "whatsapp"
+        text resposta "resposta do tutor ou do petshop"
+        timestamptz confirmado_em
+    }
