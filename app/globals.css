@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-surface-border;
+  }
+
+  ::selection {
+    @apply bg-club-light text-ink-900;
+  }
+
+  /* Foco de teclado visivel em qualquer elemento interativo — nunca so no hover. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none ring-2 ring-club ring-offset-2 ring-offset-surface;
+  }
+}
