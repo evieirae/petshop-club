@@ -17,9 +17,9 @@ navegação, contexto de petshop logado, e as 4 áreas operacionais mapeadas
 como placeholder. Schema, ER diagram e regras de negócio versionados em
 `docs/` e `supabase/migrations/`.
 
-## Fase 1 — Configuração do petshop
+## Fase 1 — Configuração do petshop ✅ concluída
 
-- [ ] Tela de configurações virando formulário de verdade sobre `petshops`:
+- [x] Tela de configurações virando formulário de verdade sobre `petshops`:
       expediente e intervalo, janela de mensagens D-1, fee fixo +
       percentual da plataforma, `isento_fee_ate`, e a política
       `falta_consome_visita_paga`.

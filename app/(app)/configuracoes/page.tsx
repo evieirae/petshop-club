@@ -1,6 +1,17 @@
-import { EmptyState } from "@/components/ui/EmptyState";
+import { redirect } from "next/navigation";
+import { getUsuarioContext } from "@/lib/auth/getContext";
+import { ConfiguracoesForm } from "./ConfiguracoesForm";
 
-export default function ConfiguracoesPage() {
+export default async function ConfiguracoesPage() {
+  const contexto = await getUsuarioContext();
+
+  // O layout (app/(app)/layout.tsx) ja bloqueia os casos de "sem sessao" e
+  // "sem petshop vinculado" antes de renderizar a pagina — isso aqui e so
+  // uma garantia extra pro TypeScript, na pratica nao deveria disparar.
+  if (!contexto?.petshop?.id) {
+    redirect("/login");
+  }
+
   return (
     <div>
       <h1 className="font-display text-2xl text-ink-900">Configurações</h1>
@@ -8,18 +19,7 @@ export default function ConfiguracoesPage() {
         Tudo que varia de petshop pra petshop — ver docs/regras_padrao_petshop.md.
       </p>
 
-      <div className="mt-8">
-        <EmptyState
-          titulo="Ainda sem tela de configurações"
-          descricao="Formulário editando direto as colunas parametrizáveis de petshops, agrupadas como no documento de regras."
-          itens={[
-            "Expediente e intervalo (hora_abertura, hora_fechamento, pausa pro almoço)",
-            "Janela de mensagens D-1 (horário do lembrete e os cortes de confirmação manhã/tarde)",
-            "Cobrança e repasse (fee_fixo_mensal, percentual_plataforma, isento_fee_ate)",
-            "Política de falta (falta_consome_visita_paga) — hoje só 'true' está implementado de ponta a ponta",
-          ]}
-        />
-      </div>
+      <ConfiguracoesForm petshop={contexto.petshop} />
     </div>
   );
 }
