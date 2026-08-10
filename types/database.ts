@@ -38,6 +38,57 @@ export interface UsuarioPetshop {
   criado_em: string;
 }
 
+// Lookups globais (mesmos pra todo petshop) — ver supabase/migrations/0001_init.sql.
+export interface Porte {
+  id: number;
+  nome: string;
+  ordem: number;
+}
+
+export interface CategoriaServico {
+  id: number;
+  nome: string;
+}
+
+// Catálogo por petshop (Fase 2 do roadmap — ver docs/regras_padrao_petshop.md seção 4).
+export interface Servico {
+  id: string;
+  petshop_id: string;
+  categoria_servico_id: number;
+  nome_customizado: string | null;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export interface PrecoServico {
+  id: string;
+  servico_id: string;
+  porte_id: number;
+  preco: number;
+}
+
+export interface Plano {
+  id: string;
+  petshop_id: string;
+  nome: string;
+  intervalo_dias: number;
+  ocorrencias_padrao_mes: number;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export interface PlanoServico {
+  plano_id: string;
+  servico_id: string;
+}
+
+export interface PlanoPreco {
+  id: string;
+  plano_id: string;
+  porte_id: number;
+  preco_assinatura: number;
+}
+
 // Placeholder generico — mantem os clientes tipaveis sem travar em tudo
 // que o schema completo (clube_banho_tosa_schema.sql) ja define.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
