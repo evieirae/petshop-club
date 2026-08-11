@@ -41,7 +41,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar ehAdminPlataforma={contexto.usuario.eh_admin_plataforma} />
       <div className="flex flex-1 flex-col">
         <Topbar usuario={contexto.usuario} petshop={contexto.petshop} />
         <main className="flex-1 px-6 py-8">{children}</main>

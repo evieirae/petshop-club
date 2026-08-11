@@ -19,7 +19,10 @@ export default async function ConfiguracoesPage() {
         Tudo que varia de petshop pra petshop — ver docs/regras_padrao_petshop.md.
       </p>
 
-      <ConfiguracoesForm petshop={contexto.petshop} />
+      <ConfiguracoesForm
+        petshop={contexto.petshop}
+        ehAdminPlataforma={contexto.usuario?.eh_admin_plataforma ?? false}
+      />
     </div>
   );
 }

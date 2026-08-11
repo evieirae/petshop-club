@@ -59,8 +59,7 @@ create table portes (
 insert into portes (id, nome, ordem) values
     (1, 'Pequeno', 1),
     (2, 'Medio',   2),
-    (3, 'Grande',  3),
-    (4, 'Gigante', 4);
+    (3, 'Grande',  3);
 
 create table categorias_servico (
     id    smallint primary key,

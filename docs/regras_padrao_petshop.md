@@ -46,6 +46,17 @@ qualquer decisão de negócio nova — tipo a de falta que originou este arquivo
 | Isento até | `isento_fee_ate` | date | *nulo* | Data até a qual o fee fixo sai zerado — usado pro período de teste do piloto. |
 | Falta consome visita paga | `falta_consome_visita_paga` | boolean | **true** | Ver seção 5 — política de negócio, não só um valor. |
 
+> **Quem edita isso**: só a administração da plataforma (`usuarios_petshop.eh_admin_plataforma = true`),
+> pela tela `/admin` — nunca o petshop parceiro. É a receita da plataforma,
+> não um parâmetro operacional do petshop. O petshop só visualiza os
+> próprios valores em Configurações (fica claro ali que é "só consulta").
+> Reforçado em dois níveis (não é só a tela que esconde o campo): a RLS de
+> `petshops` e um trigger `BEFORE UPDATE` rejeitam qualquer alteração
+> dessas 3 colunas por quem não tem a flag, mesmo via chamada direta à API
+> do Supabase — ver `supabase/migrations/0002_admin_plataforma.sql`. Não
+> existe UI de auto-promoção a admin; a flag só é marcada na mão via SQL
+> Editor.
+
 ## 4. Planos (por plano, não por petshop)
 
 Diferente do resto deste documento, estas variáveis vivem em `planos`, uma
@@ -158,3 +169,33 @@ Na prática, colocar um petshop parceiro novo no ar é preencher esta lista:
 8. Ao cadastrar o primeiro tutor, usar o link de autopreenchimento (seção 6)
    em vez de digitar tudo na mão — já testa o fluxo real que os próximos
    clientes vão usar.
+
+## 8. Visita avulsa (sem plano)
+
+Adicionado na revisão da Fase 4, pra cobrir o cliente que quer uma visita
+sem entrar numa assinatura — banho de balcão, ou um "vamos testar antes de
+assinar". Ver `supabase/migrations/0003_fase4_assinaturas_agenda.sql`.
+
+- `agendamentos.assinatura_id` fica nulo; `tutor_id`, `pet_id`, `servico_id`
+  e `preco_avulso` é que descrevem a visita (CHECK no banco garante que é
+  sempre um formato OU o outro — nunca os dois, nunca nenhum).
+- Preço é travado no momento do agendamento — snapshot de `precos_servico`
+  pelo porte do pet, mesma lógica de `plano_precos` não ser recalculado
+  depois. Se o preço do serviço mudar amanhã, a visita já agendada mantém o
+  valor de quando foi marcada.
+- Cobrança é **por visita**, não mensal proporcional — tabela própria
+  `cobrancas_avulsas` (1 linha por `agendamento_id`), separada de `cobrancas`
+  (1 linha por mês por assinatura). Mesmo split `percentual_plataforma` da
+  seção 3 se aplica.
+- Visita avulsa **não gera a próxima sozinha** — cada uma é agendada na mão,
+  uma de cada vez. `trg_agendamento_resolvido` só chama
+  `gerar_proximo_agendamento` quando `assinatura_id is not null`.
+- **Pendência pra Fase 5** (lembretes via WhatsApp): `resolver_contato()`
+  precisa de um `tutor_id` pra achar o contato certo. Pra visita de
+  assinatura, esse `tutor_id` vem de `agendamentos.assinatura_id ->
+  assinaturas.tutor_id`; pra avulsa, vem direto de `agendamentos.tutor_id`.
+  Quem for implementar o envio de fato precisa ramificar por ali.
+- "Cliente com cadastro mas sem NENHUM agendamento ainda" (nem assinatura,
+  nem avulsa) não virou tabela nova — é só um filtro na tela de Agenda
+  (tutor sem assinatura e sem agendamento avulso), útil pra equipe saber
+  quem ainda não fechou a primeira visita.

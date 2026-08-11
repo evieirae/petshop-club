@@ -8,6 +8,7 @@ import {
   Users,
   Repeat,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 
 const ITENS = [
@@ -18,8 +19,15 @@ const ITENS = [
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-export function Sidebar() {
+// So aparece pra quem tem usuarios_petshop.eh_admin_plataforma=true (ver
+// supabase/migrations/0002_admin_plataforma.sql) — item separado, no fim,
+// pra deixar claro que e uma area diferente do resto do menu (enxerga
+// TODOS os petshops, nao so o logado).
+const ITEM_ADMIN = { href: "/admin", label: "Administração", icon: ShieldCheck };
+
+export function Sidebar({ ehAdminPlataforma }: { ehAdminPlataforma: boolean }) {
   const pathname = usePathname();
+  const itens = ehAdminPlataforma ? [...ITENS, ITEM_ADMIN] : ITENS;
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-surface-border bg-surface-card px-3 py-6">
@@ -45,7 +53,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1">
-        {ITENS.map(({ href, label, icon: Icon }) => {
+        {itens.map(({ href, label, icon: Icon }) => {
           const ativo = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link

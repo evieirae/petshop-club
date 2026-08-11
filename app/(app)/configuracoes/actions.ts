@@ -5,9 +5,17 @@ import { createClient } from "@/lib/supabase/server";
 import type { Petshop } from "@/types/database";
 
 // Exatamente as colunas parametrizaveis descritas em
-// docs/regras_padrao_petshop.md (secoes 1, 2, 3 e 5). Deliberadamente NAO
+// docs/regras_padrao_petshop.md (secoes 1, 2 e 5). Deliberadamente NAO
 // inclui nome/cnpj/telefone/endereco nem campos derivados — se o cadastro
 // basico do petshop precisar de tela propria, isso e um formulario a parte.
+//
+// fee_fixo_mensal, percentual_plataforma e isento_fee_ate (secao 3, taxas
+// da plataforma) saíram daqui de proposito — ver
+// supabase/migrations/0002_admin_plataforma.sql: agora so quem tem
+// eh_admin_plataforma=true edita isso, pela tela app/(app)/admin, nunca
+// pela tela de Configuracoes do petshop. Mesmo que alguem reinclua esses
+// campos aqui por engano, o trigger no banco bloqueia o UPDATE — mas o
+// certo e nem tentar enviar.
 export type PetshopConfigInput = Pick<
   Petshop,
   | "hora_abertura"
@@ -19,9 +27,6 @@ export type PetshopConfigInput = Pick<
   | "horario_corte_confirmacao_manha"
   | "horario_corte_confirmacao_tarde"
   | "horario_limite_petshop_tarde"
-  | "fee_fixo_mensal"
-  | "percentual_plataforma"
-  | "isento_fee_ate"
   | "falta_consome_visita_paga"
 >;
 

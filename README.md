@@ -21,9 +21,11 @@ como conteúdo dentro dessa estrutura.
    ```
 
 2. Crie um projeto no [Supabase](https://supabase.com) (se ainda não tiver
-   um pra esse produto) e rode a migration em `supabase/migrations/0001_init.sql`
-   pelo SQL Editor do dashboard — ela cria todas as tabelas, triggers e
-   policies de RLS.
+   um pra esse produto) e rode as migrations, na ordem, pelo SQL Editor do
+   dashboard: primeiro `supabase/migrations/0001_init.sql` (cria todas as
+   tabelas, triggers e policies de RLS), depois
+   `supabase/migrations/0002_admin_plataforma.sql` (papel de admin da
+   plataforma — ver Fase 1 do ROADMAP.md).
 
 3. Copie `.env.example` pra `.env.local` e preencha com a URL e a anon key
    do seu projeto (Project Settings → API no dashboard do Supabase):

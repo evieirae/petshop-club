@@ -27,29 +27,75 @@ como placeholder. Schema, ER diagram e regras de negócio versionados em
 Primeiro passo porque literalmente tudo mais no schema lê parâmetros de
 `petshops`.
 
-## Fase 2 — Catálogo: serviços e planos
+**Revisão pós-Fase 3**: fee fixo, percentual da plataforma e `isento_fee_ate`
+saíram da tela de Configurações do petshop (virou só consulta) e ganharam
+tela própria em `/admin`, restrita a quem tem
+`usuarios_petshop.eh_admin_plataforma = true` — são a receita da
+plataforma, não deveriam ser editáveis pelo petshop parceiro. Ver
+`supabase/migrations/0002_admin_plataforma.sql` e seção 3 de
+`docs/regras_padrao_petshop.md`.
 
-- [ ] CRUD de `servicos` + `precos_servico`.
-- [ ] CRUD de `planos`, com `plano_servicos` e `plano_precos` por porte.
+## Fase 2 — Catálogo: serviços e planos ✅ concluída
+
+- [x] CRUD de `servicos` + `precos_servico`.
+- [x] CRUD de `planos`, com `plano_servicos` e `plano_precos` por porte.
 
 Sem isso não dá pra criar uma assinatura — é o que define o que existe pra
 vender.
 
-## Fase 3 — Cadastro de tutores e pets
+## Fase 3 — Cadastro de tutores e pets ✅ concluída
 
-- [ ] Tela de tutores puxando o formulário público de autopreenchimento
+- [x] Tela de tutores puxando o formulário público de autopreenchimento
       (seção 6 das regras): petshop cadastra só telefone, manda o link, o
       tutor preenche nome/endereço/pets.
-- [ ] UI pra cadastrar contato adicional por papel (ex.: quem busca o pet,
+- [x] UI pra cadastrar contato adicional por papel (ex.: quem busca o pet,
       se for diferente de quem agenda).
 
-## Fase 4 — Assinaturas e agenda operacional
+Implementado: `app/(app)/tutores/` (lista com indicador de
+`cadastro_completo`, CRUD de pets, contato adicional por papel) +
+`app/(public)/cadastro/[tutorId]/` (formulário público, sem sessão, usando
+`lib/supabase/admin.ts` com a service_role key pra contornar a RLS). O envio
+automático por WhatsApp continua pendente pra Fase 5 — por enquanto a tela
+só copia o link e registra o lembrete `tipo='cadastro'` como pendente.
+Requer `SUPABASE_SERVICE_ROLE_KEY` em `.env.local` (ver `.env.example`).
 
-- [ ] Fluxo de criar assinatura (dispara o 1º agendamento via trigger).
-- [ ] Tela de agenda do dia com as ações confirmar / marcar pronto / marcar
-      entregue.
+## Fase 4 — Assinaturas e agenda operacional ✅ concluída
+
+- [x] Fluxo de criar assinatura (dispara o 1º agendamento via trigger).
+- [x] Tela de agenda do dia com as ações confirmar / marcar pronto / marcar
+      entregue — mais faltou / cancelar / reagendar (schema já suportava, o
+      escopo cresceu na revisão desta fase).
 
 É a primeira tela que o petshop realmente usa no dia a dia.
+
+**Revisão da Fase 4**: no planejamento, surgiu um caso fora do desenho
+original — cliente com cadastro mas sem NENHUM agendamento ainda, geralmente
+porque quer uma visita avulsa (sem plano/assinatura). O schema original não
+suportava isso (`assinaturas.plano_id` e `agendamentos.assinatura_id` eram
+ambos `not null`). Em vez de adiar, o escopo da fase cresceu pra cobrir os
+dois:
+
+- **Visita avulsa** — `supabase/migrations/0003_fase4_assinaturas_agenda.sql`
+  torna `agendamentos.assinatura_id` opcional e adiciona `tutor_id`/`pet_id`/
+  `servico_id`/`preco_avulso` pro caso sem assinatura (CHECK garante que é
+  sempre um formato OU o outro). Cobrança de avulsa é por visita, não mensal
+  proporcional — tabela nova `cobrancas_avulsas`. Ver seção 8 de
+  `docs/regras_padrao_petshop.md`.
+- **Gerenciamento de assinatura** — criar ficou só insert (trigger já cobre o
+  resto), mas pausar/retomar/cancelar não tinham trigger nenhum cobrindo —
+  implementados em `app/(app)/tutores/actions.ts`, com o cuidado de ordem já
+  documentado em `0001_init.sql` (status da assinatura muda antes de mexer no
+  agendamento pendente).
+- **Ações da agenda** — confirmar/pronto/entregue (escopo original) mais
+  faltou/cancelar/reagendar, porque o schema (`agendamentos.status`) já
+  previa os 7 estados e a trigger de avanço de ciclo já reagia a todos eles
+  — não fazia sentido construir a tela só com 3 das 7 ações possíveis.
+- **"Sem agendamento ainda"** ficou de propósito sem tabela nova — é um
+  filtro na consulta da Agenda (tutor sem assinatura e sem agendamento
+  avulso), não um novo conceito de dado.
+
+Toda a migration foi testada direto no projeto Supabase (avulsa, ciclo de
+assinatura, pausa/retomada, split de cobrança) antes de entrar no repo.
 
 ## Fase 5 — Lembretes automáticos via WhatsApp
 

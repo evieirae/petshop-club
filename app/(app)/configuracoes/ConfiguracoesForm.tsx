@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import type { Petshop } from "@/types/database";
 import { FormSection } from "@/components/ui/FormSection";
@@ -29,9 +30,6 @@ type FormState = {
   horario_corte_confirmacao_manha: string;
   horario_corte_confirmacao_tarde: string;
   horario_limite_petshop_tarde: string;
-  fee_fixo_mensal: string;
-  percentual_plataforma: string;
-  isento_fee_ate: string;
   falta_consome_visita_paga: boolean;
 };
 
@@ -52,14 +50,17 @@ function estadoInicial(petshop: Petshop): FormState {
     horario_limite_petshop_tarde: paraInputTime(
       petshop.horario_limite_petshop_tarde
     ),
-    fee_fixo_mensal: String(petshop.fee_fixo_mensal),
-    percentual_plataforma: paraPercentualExibido(petshop.percentual_plataforma),
-    isento_fee_ate: petshop.isento_fee_ate ?? "",
     falta_consome_visita_paga: petshop.falta_consome_visita_paga,
   };
 }
 
-export function ConfiguracoesForm({ petshop }: { petshop: Petshop }) {
+export function ConfiguracoesForm({
+  petshop,
+  ehAdminPlataforma,
+}: {
+  petshop: Petshop;
+  ehAdminPlataforma: boolean;
+}) {
   const [form, setForm] = useState<FormState>(() => estadoInicial(petshop));
   const [erros, setErros] = useState<Partial<Record<keyof FormState, string>>>(
     {}
@@ -97,16 +98,6 @@ export function ConfiguracoesForm({ petshop }: { petshop: Petshop }) {
       novosErros.hora_fim_intervalo = "Precisa ser depois do início do intervalo.";
     }
 
-    const percentual = Number(form.percentual_plataforma);
-    if (Number.isNaN(percentual) || percentual < 0 || percentual > 100) {
-      novosErros.percentual_plataforma = "Use um valor entre 0 e 100.";
-    }
-
-    const fee = Number(form.fee_fixo_mensal);
-    if (Number.isNaN(fee) || fee < 0) {
-      novosErros.fee_fixo_mensal = "Use um valor maior ou igual a zero.";
-    }
-
     setErros(novosErros);
     return Object.keys(novosErros).length === 0;
   }
@@ -127,9 +118,6 @@ export function ConfiguracoesForm({ petshop }: { petshop: Petshop }) {
       horario_corte_confirmacao_manha: form.horario_corte_confirmacao_manha,
       horario_corte_confirmacao_tarde: form.horario_corte_confirmacao_tarde,
       horario_limite_petshop_tarde: form.horario_limite_petshop_tarde,
-      fee_fixo_mensal: Number(form.fee_fixo_mensal),
-      percentual_plataforma: Number(form.percentual_plataforma) / 100,
-      isento_fee_ate: form.isento_fee_ate || null,
       falta_consome_visita_paga: form.falta_consome_visita_paga,
     };
 
@@ -292,66 +280,44 @@ export function ConfiguracoesForm({ petshop }: { petshop: Petshop }) {
       <FormSection
         numero="3"
         titulo="Cobrança e repasse"
-        descricao="Mensalidade da plataforma e o corte sobre cada cobrança de tosa."
+        descricao="Mensalidade da plataforma e o corte sobre cada cobrança de tosa — definidos pela administração da plataforma, aqui é só consulta."
       >
-        <FormField
-          label="Fee fixo mensal"
-          htmlFor="fee_fixo_mensal"
-          error={erros.fee_fixo_mensal}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-ink-500">R$</span>
-            <input
-              id="fee_fixo_mensal"
-              type="number"
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              required
-              className={inputClass}
-              value={form.fee_fixo_mensal}
-              onChange={(e) => atualizar("fee_fixo_mensal", e.target.value)}
-            />
+        <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 gap-4 rounded-lg border border-dashed border-surface-border bg-surface px-4 py-3 sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-ink-500">Fee fixo mensal</p>
+              <p className="mt-0.5 font-medium text-ink-900">
+                R$ {petshop.fee_fixo_mensal.toFixed(2)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-ink-500">Percentual da plataforma</p>
+              <p className="mt-0.5 font-medium text-ink-900">
+                {paraPercentualExibido(petshop.percentual_plataforma)}%
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-ink-500">Isento até</p>
+              <p className="mt-0.5 font-medium text-ink-900">
+                {petshop.isento_fee_ate ?? "—"}
+              </p>
+            </div>
           </div>
-        </FormField>
-        <FormField
-          label="Percentual da plataforma"
-          htmlFor="percentual_plataforma"
-          hint="Corte sobre cada cobrança de tosa que passa pela plataforma."
-          error={erros.percentual_plataforma}
-        >
-          <div className="flex items-center gap-2">
-            <input
-              id="percentual_plataforma"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              inputMode="decimal"
-              required
-              className={inputClass}
-              value={form.percentual_plataforma}
-              onChange={(e) =>
-                atualizar("percentual_plataforma", e.target.value)
-              }
-            />
-            <span className="text-sm text-ink-500">%</span>
-          </div>
-        </FormField>
-        <FormField
-          label="Isento até"
-          htmlFor="isento_fee_ate"
-          hint="Data até a qual o fee fixo sai zerado — período de piloto. Deixe em branco fora do piloto."
-          full
-        >
-          <input
-            id="isento_fee_ate"
-            type="date"
-            className={inputClass}
-            value={form.isento_fee_ate}
-            onChange={(e) => atualizar("isento_fee_ate", e.target.value)}
-          />
-        </FormField>
+          <p className="mt-2 text-xs text-ink-500">
+            {ehAdminPlataforma ? (
+              <>
+                Você é admin da plataforma — edite esses valores (deste ou de
+                qualquer outro petshop) em{" "}
+                <Link href="/admin" className="font-medium text-club-dark hover:underline">
+                  Administração
+                </Link>
+                .
+              </>
+            ) : (
+              "Só a administração da plataforma altera esses valores. Qualquer dúvida sobre cobrança, fale com o suporte."
+            )}
+          </p>
+        </div>
       </FormSection>
 
       <FormSection
