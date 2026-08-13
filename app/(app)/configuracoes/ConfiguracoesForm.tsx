@@ -26,6 +26,7 @@ type FormState = {
   hora_inicio_intervalo: string;
   hora_fim_intervalo: string;
   hora_divisao_periodo: string;
+  intervalo_agendamento_minutos: string;
   horario_envio_lembrete: string;
   horario_corte_confirmacao_manha: string;
   horario_corte_confirmacao_tarde: string;
@@ -40,6 +41,7 @@ function estadoInicial(petshop: Petshop): FormState {
     hora_inicio_intervalo: paraInputTime(petshop.hora_inicio_intervalo),
     hora_fim_intervalo: paraInputTime(petshop.hora_fim_intervalo),
     hora_divisao_periodo: paraInputTime(petshop.hora_divisao_periodo),
+    intervalo_agendamento_minutos: String(petshop.intervalo_agendamento_minutos),
     horario_envio_lembrete: paraInputTime(petshop.horario_envio_lembrete),
     horario_corte_confirmacao_manha: paraInputTime(
       petshop.horario_corte_confirmacao_manha
@@ -98,6 +100,11 @@ export function ConfiguracoesForm({
       novosErros.hora_fim_intervalo = "Precisa ser depois do início do intervalo.";
     }
 
+    const intervaloAgendamento = Number(form.intervalo_agendamento_minutos);
+    if (!Number.isInteger(intervaloAgendamento) || intervaloAgendamento <= 0) {
+      novosErros.intervalo_agendamento_minutos = "Precisa ser um número de minutos maior que zero.";
+    }
+
     setErros(novosErros);
     return Object.keys(novosErros).length === 0;
   }
@@ -114,6 +121,7 @@ export function ConfiguracoesForm({
       hora_inicio_intervalo: form.hora_inicio_intervalo || null,
       hora_fim_intervalo: form.hora_fim_intervalo || null,
       hora_divisao_periodo: form.hora_divisao_periodo,
+      intervalo_agendamento_minutos: Number(form.intervalo_agendamento_minutos),
       horario_envio_lembrete: form.horario_envio_lembrete,
       horario_corte_confirmacao_manha: form.horario_corte_confirmacao_manha,
       horario_corte_confirmacao_tarde: form.horario_corte_confirmacao_tarde,
@@ -193,7 +201,6 @@ export function ConfiguracoesForm({
           label="Corte manhã/tarde"
           htmlFor="hora_divisao_periodo"
           hint="Define o que conta como agendamento de manhã x de tarde nos lembretes (seção 2)."
-          full
         >
           <input
             id="hora_divisao_periodo"
@@ -202,6 +209,23 @@ export function ConfiguracoesForm({
             className={inputClass}
             value={form.hora_divisao_periodo}
             onChange={(e) => atualizar("hora_divisao_periodo", e.target.value)}
+          />
+        </FormField>
+        <FormField
+          label="Intervalo entre horários (minutos)"
+          htmlFor="intervalo_agendamento_minutos"
+          hint="Espaçamento da grade de horários oferecida ao agendar (ex.: 60 = de hora em hora)."
+          error={erros.intervalo_agendamento_minutos}
+        >
+          <input
+            id="intervalo_agendamento_minutos"
+            type="number"
+            min="1"
+            step="1"
+            required
+            className={inputClass}
+            value={form.intervalo_agendamento_minutos}
+            onChange={(e) => atualizar("intervalo_agendamento_minutos", e.target.value)}
           />
         </FormField>
       </FormSection>

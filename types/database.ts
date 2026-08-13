@@ -26,6 +26,9 @@ export interface Petshop {
   horario_corte_confirmacao_tarde: string;
   horario_limite_petshop_tarde: string;
   falta_consome_visita_paga: boolean;
+  // Ver supabase/migrations/0004_intervalo_agendamento.sql — espaçamento
+  // entre horários selecionáveis na agenda (lib/horarios.ts).
+  intervalo_agendamento_minutos: number;
   criado_em: string;
 }
 

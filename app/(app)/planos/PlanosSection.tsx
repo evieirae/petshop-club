@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import type { Plano, PlanoPreco, PlanoServico, Porte, Servico } from "@/types/database";
+import type { CategoriaServico, Plano, PlanoPreco, PlanoServico, Porte, Servico } from "@/types/database";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField, inputClass } from "@/components/ui/FormField";
 import {
@@ -24,13 +24,23 @@ function AtivoBadge({ ativo }: { ativo: boolean }) {
   );
 }
 
-function nomeServico(servico: Servico) {
-  return servico.nome_customizado?.trim() || `Serviço #${servico.id.slice(0, 4)}`;
+// Mesma regra de app/(app)/planos/ServicosSection.tsx (nomeExibicao): nome
+// customizado se tiver, senão o nome da categoria (Banho, Tosa Higiênica…) —
+// a maioria dos serviços não tem nome_customizado preenchido, então cair
+// direto num "Serviço #id" (como era antes) deixava a lista de checkboxes
+// ilegível.
+function nomeServico(servico: Servico, categorias: CategoriaServico[]) {
+  return (
+    servico.nome_customizado?.trim() ||
+    categorias.find((c) => c.id === servico.categoria_servico_id)?.nome ||
+    "Serviço sem categoria"
+  );
 }
 
 export function PlanosSection({
   petshopId,
   portes,
+  categorias,
   servicos,
   planos,
   planoServicos,
@@ -38,6 +48,7 @@ export function PlanosSection({
 }: {
   petshopId: string;
   portes: Porte[];
+  categorias: CategoriaServico[];
   servicos: Servico[];
   planos: Plano[];
   planoServicos: PlanoServico[];
@@ -92,6 +103,7 @@ export function PlanosSection({
               key={plano.id}
               plano={plano}
               portes={portes}
+              categorias={categorias}
               servicos={servicos}
               servicosSelecionados={planoServicos
                 .filter((ps) => ps.plano_id === plano.id)
@@ -214,12 +226,14 @@ function NovoPlanoForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
 function PlanoCard({
   plano,
   portes,
+  categorias,
   servicos,
   servicosSelecionados,
   precos,
 }: {
   plano: Plano;
   portes: Porte[];
+  categorias: CategoriaServico[];
   servicos: Servico[];
   servicosSelecionados: string[];
   precos: PlanoPreco[];
@@ -231,6 +245,7 @@ function PlanoCard({
       <PlanoEditForm
         plano={plano}
         portes={portes}
+        categorias={categorias}
         servicos={servicos}
         servicosSelecionados={servicosSelecionados}
         precos={precos}
@@ -242,7 +257,7 @@ function PlanoCard({
 
   const nomesServicos = servicos
     .filter((s) => servicosSelecionados.includes(s.id))
-    .map(nomeServico);
+    .map((s) => nomeServico(s, categorias));
 
   return (
     <div className="rounded-xl border border-surface-border bg-surface-card p-4">
@@ -310,6 +325,7 @@ function AtivoToggleButton({
 function PlanoEditForm({
   plano,
   portes,
+  categorias,
   servicos,
   servicosSelecionados,
   precos,
@@ -318,6 +334,7 @@ function PlanoEditForm({
 }: {
   plano: Plano;
   portes: Porte[];
+  categorias: CategoriaServico[];
   servicos: Servico[];
   servicosSelecionados: string[];
   precos: PlanoPreco[];
@@ -459,7 +476,7 @@ function PlanoEditForm({
                   onChange={() => alternarServico(servico.id)}
                   className="h-4 w-4 rounded border-surface-border text-club focus:ring-club"
                 />
-                {nomeServico(servico)}
+                {nomeServico(servico, categorias)}
                 {!servico.ativo && (
                   <span className="text-xs text-pendente">(inativo)</span>
                 )}

@@ -13,6 +13,7 @@ import type {
 } from "@/types/database";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField, inputClass } from "@/components/ui/FormField";
+import { gerarHorariosDisponiveis, type ExpedientePetshop } from "@/lib/horarios";
 import {
   atualizarPet,
   atualizarTutor,
@@ -78,6 +79,7 @@ function CadastroBadge({ completo }: { completo: boolean }) {
 
 export function TutoresSection({
   petshopId,
+  expediente,
   portes,
   tutores,
   pets,
@@ -86,6 +88,7 @@ export function TutoresSection({
   assinaturas,
 }: {
   petshopId: string;
+  expediente: ExpedientePetshop;
   portes: Porte[];
   tutores: Tutor[];
   pets: Pet[];
@@ -136,6 +139,7 @@ export function TutoresSection({
             <TutorCard
               key={tutor.id}
               petshopId={petshopId}
+              expediente={expediente}
               tutor={tutor}
               portes={portes}
               pets={pets.filter((p) => p.tutor_id === tutor.id)}
@@ -277,6 +281,7 @@ function CopiarLinkButton({ tutorId }: { tutorId: string }) {
 
 function TutorCard({
   petshopId,
+  expediente,
   tutor,
   portes,
   pets,
@@ -285,6 +290,7 @@ function TutorCard({
   assinaturas,
 }: {
   petshopId: string;
+  expediente: ExpedientePetshop;
   tutor: Tutor;
   portes: Porte[];
   pets: Pet[];
@@ -326,6 +332,7 @@ function TutorCard({
           <TutorDadosForm tutor={tutor} />
           <PetsSubsection
             petshopId={petshopId}
+            expediente={expediente}
             tutorId={tutor.id}
             portes={portes}
             pets={pets}
@@ -449,6 +456,7 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
 
 function PetsSubsection({
   petshopId,
+  expediente,
   tutorId,
   portes,
   pets,
@@ -456,6 +464,7 @@ function PetsSubsection({
   assinaturas,
 }: {
   petshopId: string;
+  expediente: ExpedientePetshop;
   tutorId: string;
   portes: Porte[];
   pets: Pet[];
@@ -496,6 +505,7 @@ function PetsSubsection({
             <PetRow
               key={pet.id}
               petshopId={petshopId}
+              expediente={expediente}
               tutorId={tutorId}
               pet={pet}
               portes={portes}
@@ -638,6 +648,7 @@ function PetForm({
 
 function PetRow({
   petshopId,
+  expediente,
   tutorId,
   pet,
   portes,
@@ -645,6 +656,7 @@ function PetRow({
   assinaturas,
 }: {
   petshopId: string;
+  expediente: ExpedientePetshop;
   tutorId: string;
   pet: Pet;
   portes: Porte[];
@@ -726,6 +738,7 @@ function PetRow({
         <div className="mt-3 border-t border-surface-border pt-3">
           <AssinaturaBlock
             petshopId={petshopId}
+            expediente={expediente}
             tutorId={tutorId}
             petId={pet.id}
             planos={planos}
@@ -758,12 +771,14 @@ function AssinaturaStatusBadge({ status }: { status: StatusAssinatura }) {
 
 function AssinaturaBlock({
   petshopId,
+  expediente,
   tutorId,
   petId,
   planos,
   assinatura,
 }: {
   petshopId: string;
+  expediente: ExpedientePetshop;
   tutorId: string;
   petId: string;
   planos: Plano[];
@@ -802,6 +817,7 @@ function AssinaturaBlock({
         (criando ? (
           <AssinaturaForm
             petshopId={petshopId}
+            expediente={expediente}
             tutorId={tutorId}
             petId={petId}
             planos={planos}
@@ -871,21 +887,24 @@ function AssinaturaAcoes({ assinatura }: { assinatura: Assinatura }) {
 
 function AssinaturaForm({
   petshopId,
+  expediente,
   tutorId,
   petId,
   planos,
   onDone,
 }: {
   petshopId: string;
+  expediente: ExpedientePetshop;
   tutorId: string;
   petId: string;
   planos: Plano[];
   onDone: () => void;
 }) {
   const planosAtivos = planos.filter((p) => p.ativo);
+  const horarios = gerarHorariosDisponiveis(expediente);
   const [planoId, setPlanoId] = useState(planosAtivos[0]?.id ?? "");
   const [diaSemana, setDiaSemana] = useState(() => new Date().getDay());
-  const [horario, setHorario] = useState("09:00");
+  const [horario, setHorario] = useState(() => horarios[0] ?? "09:00");
   const [dataInicio, setDataInicio] = useState(dataLocalHoje);
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
@@ -904,6 +923,10 @@ function AssinaturaForm({
 
     if (!planoId) {
       setErro("Escolha um plano.");
+      return;
+    }
+    if (!horario) {
+      setErro("Nenhum horário disponível — confira o expediente em Configurações.");
       return;
     }
 
@@ -960,15 +983,25 @@ function AssinaturaForm({
       <FormField
         label="Horário preferencial"
         htmlFor={`assinatura_horario_${petId}`}
-        hint="Só usado pra gerar a 1ª visita — o dia da semana se repete a partir dela."
+        hint={
+          horarios.length === 0
+            ? "Confira o expediente em Configurações."
+            : "Só usado pra gerar a 1ª visita — o dia da semana se repete a partir dela."
+        }
       >
-        <input
+        <select
           id={`assinatura_horario_${petId}`}
-          type="time"
           className={inputClass}
           value={horario}
           onChange={(e) => setHorario(e.target.value)}
-        />
+          disabled={horarios.length === 0}
+        >
+          {horarios.map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
       </FormField>
       <FormField label="Início" htmlFor={`assinatura_inicio_${petId}`}>
         <input
@@ -983,7 +1016,7 @@ function AssinaturaForm({
       <div className="flex items-center gap-3 sm:col-span-2">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || horarios.length === 0}
           className="rounded-lg bg-club px-3 py-1.5 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
         >
           {pending ? "Criando…" : "Criar assinatura"}

@@ -66,6 +66,7 @@ export default async function PlanosPage() {
         <PlanosSection
           petshopId={petshopId}
           portes={(portes as Porte[]) ?? []}
+          categorias={(categorias as CategoriaServico[]) ?? []}
           servicos={(servicos as Servico[]) ?? []}
           planos={(planos as Plano[]) ?? []}
           planoServicos={(planoServicos as PlanoServico[]) ?? []}

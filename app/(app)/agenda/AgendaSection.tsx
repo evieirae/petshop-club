@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import type {
   Agendamento,
@@ -11,8 +12,15 @@ import type {
   StatusAgendamento,
   Tutor,
 } from "@/types/database";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField, inputClass } from "@/components/ui/FormField";
+import { gerarHorariosDisponiveis, type ExpedientePetshop } from "@/lib/horarios";
+import {
+  adicionarDias,
+  diasDaSemana,
+  formatarDataCurta,
+  nomeDiaSemana,
+  paraDataLocal,
+} from "@/lib/semana";
 import {
   cancelarAgendamento,
   confirmarAgendamento,
@@ -23,6 +31,25 @@ import {
   reagendar,
   type ActionResult,
 } from "./actions";
+
+function horarioLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function dataLocalDoISO(iso: string): string {
+  return paraDataLocal(new Date(iso));
+}
+
+// Combina "YYYY-MM-DD" + "HH:MM" num Date pelos componentes locais — nunca
+// concatenando string e passando pro construtor, que trata alguns formatos
+// como UTC (mesma cautela documentada em app/(app)/tutores/actions.ts).
+function combinarDataHorario(data: string, horario: string): Date {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const [hora, minuto] = horario.split(":").map(Number);
+  return new Date(ano, mes - 1, dia, hora, minuto, 0, 0);
+}
 
 const TERMINAIS: StatusAgendamento[] = ["entregue", "faltou", "cancelado"];
 
@@ -107,9 +134,17 @@ function resolverAgendamento(agendamento: Agendamento, ctx: ContextoNomes): Agen
   };
 }
 
+// O que abre o formulário de visita avulsa: de onde veio o clique (botão
+// geral, célula vazia do quadro, ou tutor sem agendamento) decide quais
+// campos já chegam preenchidos.
+type FormularioAvulsaInfo = { data: string; horario?: string; tutorId?: string };
+
 export function AgendaSection({
   petshopId,
-  agendamentosHoje,
+  expediente,
+  diaSelecionado,
+  inicioSemana,
+  agendamentosSemana,
   tutores,
   pets,
   servicos,
@@ -119,7 +154,10 @@ export function AgendaSection({
   tutoresSemAgendamento,
 }: {
   petshopId: string;
-  agendamentosHoje: Agendamento[];
+  expediente: ExpedientePetshop;
+  diaSelecionado: string;
+  inicioSemana: string;
+  agendamentosSemana: Agendamento[];
   tutores: Tutor[];
   pets: Pet[];
   servicos: Servico[];
@@ -128,63 +166,188 @@ export function AgendaSection({
   assinaturas: Assinatura[];
   tutoresSemAgendamento: Tutor[];
 }) {
-  const [agendando, setAgendando] = useState(false);
-  const [tutorPreSelecionado, setTutorPreSelecionado] = useState<string | undefined>();
-  const ctx: ContextoNomes = { tutores, pets, servicos, categorias, planos, assinaturas };
+  const [formularioAvulsa, setFormularioAvulsa] = useState<FormularioAvulsaInfo | null>(null);
+  const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
 
-  const itens = [...agendamentosHoje].sort((a, b) => a.data_hora.localeCompare(b.data_hora));
+  const ctx: ContextoNomes = { tutores, pets, servicos, categorias, planos, assinaturas };
+  const resolvidos = agendamentosSemana.map((a) => resolverAgendamento(a, ctx));
+
+  const dias = diasDaSemana(inicioSemana);
+  const hoje = paraDataLocal(new Date());
+
+  // Linhas do quadro: a grade fixa do expediente + qualquer horário "fora
+  // da grade" que já exista em dados reais (ex.: visita antiga de antes do
+  // intervalo_agendamento_minutos existir) — nada some do quadro por causa
+  // de uma mudança de configuração depois.
+  const horariosGrade = gerarHorariosDisponiveis(expediente);
+  const horariosExtras = resolvidos
+    .map((r) => horarioLocal(r.agendamento.data_hora))
+    .filter((h) => !horariosGrade.includes(h));
+  const horarios = Array.from(new Set([...horariosGrade, ...horariosExtras])).sort();
+
+  // dia -> horario -> visitas naquela célula.
+  const grade = new Map<string, Map<string, AgendamentoResolvido[]>>();
+  for (const r of resolvidos) {
+    const dia = dataLocalDoISO(r.agendamento.data_hora);
+    const horario = horarioLocal(r.agendamento.data_hora);
+    if (!grade.has(dia)) grade.set(dia, new Map());
+    const porHorario = grade.get(dia)!;
+    if (!porHorario.has(horario)) porHorario.set(horario, []);
+    porHorario.get(horario)!.push(r);
+  }
+
+  const selecionado = selecionadoId
+    ? resolvidos.find((r) => r.agendamento.id === selecionadoId)
+    : undefined;
 
   return (
     <div className="space-y-8">
       <section>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl text-ink-900">Hoje</h2>
+            <h2 className="font-display text-xl text-ink-900">Semana</h2>
             <p className="mt-1 text-sm text-ink-500">
-              {itens.length === 0
-                ? "Nenhuma visita hoje."
-                : `${itens.length} visita${itens.length > 1 ? "s" : ""} hoje.`}
+              {formatarDataCurta(inicioSemana)} a {formatarDataCurta(adicionarDias(inicioSemana, 6))}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setTutorPreSelecionado(undefined);
-              setAgendando((v) => !v);
-            }}
-            className="rounded-lg border border-club px-4 py-2 text-sm font-medium text-club-dark transition hover:bg-club-light"
-          >
-            {agendando ? "Cancelar" : "+ Agendar visita avulsa"}
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/agenda?data=${adicionarDias(inicioSemana, -7)}`}
+              className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+            >
+              ‹ Semana anterior
+            </Link>
+            <Link
+              href="/agenda"
+              className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+            >
+              Hoje
+            </Link>
+            <Link
+              href={`/agenda?data=${adicionarDias(inicioSemana, 7)}`}
+              className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+            >
+              Semana seguinte ›
+            </Link>
+            <button
+              type="button"
+              onClick={() =>
+                setFormularioAvulsa((atual) => (atual ? null : { data: diaSelecionado }))
+              }
+              className="rounded-lg border border-club px-4 py-2 text-sm font-medium text-club-dark transition hover:bg-club-light"
+            >
+              {formularioAvulsa ? "Cancelar" : "+ Agendar visita avulsa"}
+            </button>
+          </div>
         </div>
 
-        {agendando && (
+        {formularioAvulsa && (
           <div className="mt-4">
             <AvulsaForm
               petshopId={petshopId}
+              expediente={expediente}
               tutores={tutores}
               pets={pets}
               servicos={servicos}
               categorias={categorias}
-              tutorInicial={tutorPreSelecionado}
-              onDone={() => setAgendando(false)}
+              info={formularioAvulsa}
+              onDone={() => setFormularioAvulsa(null)}
             />
           </div>
         )}
 
-        <div className="mt-4 space-y-3">
-          {itens.length === 0 && !agendando ? (
-            <EmptyState
-              titulo="Nada agendado pra hoje"
-              descricao="Visitas de assinatura aparecem aqui sozinhas (geradas pelo ciclo automático) — ou agende uma visita avulsa acima."
+        <div className="mt-4 overflow-x-auto rounded-xl border border-surface-border bg-surface-card">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
+            <thead>
+              <tr>
+                <th className="w-16 border-b border-r border-surface-border bg-surface p-2" />
+                {dias.map((dia) => (
+                  <th
+                    key={dia}
+                    className={`border-b border-surface-border p-2 text-center font-medium ${
+                      dia === hoje ? "bg-club-light/40" : "bg-surface"
+                    }`}
+                  >
+                    <div className="text-xs font-normal text-ink-500">{nomeDiaSemana(dia)}</div>
+                    <div className="text-ink-900">{formatarDataCurta(dia)}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {horarios.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-sm text-ink-500">
+                    Nenhum horário no expediente configurado — confira Configurações.
+                  </td>
+                </tr>
+              ) : (
+                horarios.map((horario) => (
+                  <tr key={horario}>
+                    <td className="border-b border-r border-surface-border p-2 align-top font-mono text-xs text-ink-500">
+                      {horario}
+                    </td>
+                    {dias.map((dia) => {
+                      const itens = grade.get(dia)?.get(horario) ?? [];
+                      return (
+                        <td
+                          key={dia}
+                          className={`border-b border-surface-border p-1 align-top ${
+                            dia === hoje ? "bg-club-light/10" : ""
+                          }`}
+                        >
+                          <div className="flex flex-col gap-1">
+                            {itens.map((r) => (
+                              <button
+                                key={r.agendamento.id}
+                                type="button"
+                                onClick={() =>
+                                  setSelecionadoId((atual) =>
+                                    atual === r.agendamento.id ? null : r.agendamento.id
+                                  )
+                                }
+                                className={`truncate rounded px-1.5 py-1 text-left text-xs transition ${
+                                  ESTILO_STATUS[r.agendamento.status]
+                                } ${
+                                  selecionadoId === r.agendamento.id
+                                    ? "ring-2 ring-club ring-offset-1"
+                                    : ""
+                                }`}
+                                title={`${r.pet?.nome ?? "Pet removido"} · ${r.tutor?.nome ?? "Tutor removido"}`}
+                              >
+                                {r.pet?.nome ?? "Pet removido"}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setFormularioAvulsa({ data: dia, horario })}
+                              className="text-left text-[11px] text-ink-500 hover:text-club-dark"
+                            >
+                              + novo
+                            </button>
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4">
+          {selecionado ? (
+            <AgendamentoCard
+              resolvido={selecionado}
+              expediente={expediente}
+              onFechar={() => setSelecionadoId(null)}
             />
           ) : (
-            itens.map((agendamento) => (
-              <AgendamentoCard
-                key={agendamento.id}
-                resolvido={resolverAgendamento(agendamento, ctx)}
-              />
-            ))
+            <p className="text-sm text-ink-500">
+              Clique numa visita no quadro acima pra ver os detalhes e as ações
+              (confirmar, marcar pronto, entregue…).
+            </p>
           )}
         </div>
       </section>
@@ -208,10 +371,7 @@ export function AgendaSection({
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setTutorPreSelecionado(tutor.id);
-                    setAgendando(true);
-                  }}
+                  onClick={() => setFormularioAvulsa({ data: diaSelecionado, tutorId: tutor.id })}
                   className="text-xs font-medium text-club-dark hover:underline"
                 >
                   Agendar visita avulsa
@@ -225,7 +385,15 @@ export function AgendaSection({
   );
 }
 
-function AgendamentoCard({ resolvido }: { resolvido: AgendamentoResolvido }) {
+function AgendamentoCard({
+  resolvido,
+  expediente,
+  onFechar,
+}: {
+  resolvido: AgendamentoResolvido;
+  expediente: ExpedientePetshop;
+  onFechar?: () => void;
+}) {
   const { agendamento, tutor, pet, rotulo, origem } = resolvido;
   const [reagendando, setReagendando] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -242,7 +410,7 @@ function AgendamentoCard({ resolvido }: { resolvido: AgendamentoResolvido }) {
   const terminal = TERMINAIS.includes(agendamento.status);
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-4">
+    <div className="rounded-xl border border-club bg-surface-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -263,34 +431,45 @@ function AgendamentoCard({ resolvido }: { resolvido: AgendamentoResolvido }) {
           {tutor?.telefone && <p className="text-xs text-ink-500">{tutor.telefone}</p>}
         </div>
 
-        {!terminal && (
-          <div className="flex flex-wrap items-center gap-2">
-            {(agendamento.status === "agendado" || agendamento.status === "reagendado") && (
-              <AcaoBotao onClick={() => executar(confirmarAgendamento)} pending={pending}>
-                Confirmar
+        <div className="flex flex-wrap items-center gap-2">
+          {!terminal && (
+            <>
+              {(agendamento.status === "agendado" || agendamento.status === "reagendado") && (
+                <AcaoBotao onClick={() => executar(confirmarAgendamento)} pending={pending}>
+                  Confirmar
+                </AcaoBotao>
+              )}
+              {agendamento.status !== "pronto" && (
+                <AcaoBotao onClick={() => executar(marcarPronto)} pending={pending}>
+                  Pronto
+                </AcaoBotao>
+              )}
+              {agendamento.status === "pronto" && (
+                <AcaoBotao onClick={() => executar(marcarEntregue)} pending={pending} destaque>
+                  Entregue
+                </AcaoBotao>
+              )}
+              <AcaoBotao onClick={() => setReagendando((v) => !v)} pending={pending}>
+                Reagendar
               </AcaoBotao>
-            )}
-            {agendamento.status !== "pronto" && (
-              <AcaoBotao onClick={() => executar(marcarPronto)} pending={pending}>
-                Pronto
+              <AcaoBotao onClick={() => executar(marcarFaltou)} pending={pending} atencao>
+                Faltou
               </AcaoBotao>
-            )}
-            {agendamento.status === "pronto" && (
-              <AcaoBotao onClick={() => executar(marcarEntregue)} pending={pending} destaque>
-                Entregue
+              <AcaoBotao onClick={() => executar(cancelarAgendamento)} pending={pending} atencao>
+                Cancelar
               </AcaoBotao>
-            )}
-            <AcaoBotao onClick={() => setReagendando((v) => !v)} pending={pending}>
-              Reagendar
-            </AcaoBotao>
-            <AcaoBotao onClick={() => executar(marcarFaltou)} pending={pending} atencao>
-              Faltou
-            </AcaoBotao>
-            <AcaoBotao onClick={() => executar(cancelarAgendamento)} pending={pending} atencao>
-              Cancelar
-            </AcaoBotao>
-          </div>
-        )}
+            </>
+          )}
+          {onFechar && (
+            <button
+              type="button"
+              onClick={onFechar}
+              className="text-xs font-medium text-ink-500 hover:text-ink-700"
+            >
+              Fechar
+            </button>
+          )}
+        </div>
       </div>
 
       {erro && <p className="mt-2 text-xs text-pendente">{erro}</p>}
@@ -300,6 +479,7 @@ function AgendamentoCard({ resolvido }: { resolvido: AgendamentoResolvido }) {
           <ReagendarForm
             agendamentoId={agendamento.id}
             dataHoraAtual={agendamento.data_hora}
+            expediente={expediente}
             onDone={() => setReagendando(false)}
           />
         </div>
@@ -339,30 +519,41 @@ function AcaoBotao({
   );
 }
 
-function paraInputDatetimeLocal(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 function ReagendarForm({
   agendamentoId,
   dataHoraAtual,
+  expediente,
   onDone,
 }: {
   agendamentoId: string;
   dataHoraAtual: string;
+  expediente: ExpedientePetshop;
   onDone: () => void;
 }) {
-  const [novaDataHora, setNovaDataHora] = useState(paraInputDatetimeLocal(dataHoraAtual));
+  const horarios = gerarHorariosDisponiveis(expediente);
+  const horarioAtual = horarioLocal(dataHoraAtual);
+
+  const [novaData, setNovaData] = useState(() => dataLocalDoISO(dataHoraAtual));
+  const [novoHorario, setNovoHorario] = useState(() =>
+    horarios.includes(horarioAtual) ? horarioAtual : horarios[0] ?? ""
+  );
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setErro("");
+
+    if (!novoHorario) {
+      setErro("Nenhum horário disponível — confira o expediente em Configurações.");
+      return;
+    }
+
     startTransition(async () => {
-      const resultado = await reagendar(agendamentoId, new Date(novaDataHora).toISOString());
+      const resultado = await reagendar(
+        agendamentoId,
+        combinarDataHorario(novaData, novoHorario).toISOString()
+      );
       if (resultado.ok) {
         onDone();
       } else {
@@ -373,18 +564,33 @@ function ReagendarForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-      <FormField label="Nova data e horário" htmlFor={`reagendar_${agendamentoId}`}>
+      <FormField label="Nova data" htmlFor={`reagendar_data_${agendamentoId}`}>
         <input
-          id={`reagendar_${agendamentoId}`}
-          type="datetime-local"
+          id={`reagendar_data_${agendamentoId}`}
+          type="date"
           className={inputClass}
-          value={novaDataHora}
-          onChange={(e) => setNovaDataHora(e.target.value)}
+          value={novaData}
+          onChange={(e) => setNovaData(e.target.value)}
         />
+      </FormField>
+      <FormField label="Novo horário" htmlFor={`reagendar_horario_${agendamentoId}`}>
+        <select
+          id={`reagendar_horario_${agendamentoId}`}
+          className={inputClass}
+          value={novoHorario}
+          onChange={(e) => setNovoHorario(e.target.value)}
+          disabled={horarios.length === 0}
+        >
+          {horarios.map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
       </FormField>
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || horarios.length === 0}
         className="rounded-lg bg-club px-3 py-1.5 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
       >
         {pending ? "Salvando…" : "Confirmar novo horário"}
@@ -396,26 +602,32 @@ function ReagendarForm({
 
 function AvulsaForm({
   petshopId,
+  expediente,
   tutores,
   pets,
   servicos,
   categorias,
-  tutorInicial,
+  info,
   onDone,
 }: {
   petshopId: string;
+  expediente: ExpedientePetshop;
   tutores: Tutor[];
   pets: Pet[];
   servicos: Servico[];
   categorias: CategoriaServico[];
-  tutorInicial?: string;
+  info: FormularioAvulsaInfo;
   onDone: () => void;
 }) {
-  const [tutorId, setTutorId] = useState(tutorInicial ?? tutores[0]?.id ?? "");
+  const horarios = gerarHorariosDisponiveis(expediente);
+  const [tutorId, setTutorId] = useState(info.tutorId ?? tutores[0]?.id ?? "");
   const petsDoTutor = pets.filter((p) => p.tutor_id === tutorId);
   const [petId, setPetId] = useState(petsDoTutor[0]?.id ?? "");
   const [servicoId, setServicoId] = useState(servicos[0]?.id ?? "");
-  const [dataHora, setDataHora] = useState(() => paraInputDatetimeLocal(new Date().toISOString()));
+  const [data, setData] = useState(info.data);
+  const [horario, setHorario] = useState(
+    info.horario && horarios.includes(info.horario) ? info.horario : horarios[0] ?? ""
+  );
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
 
@@ -433,13 +645,17 @@ function AvulsaForm({
       setErro("Escolha tutor, pet e serviço.");
       return;
     }
+    if (!horario) {
+      setErro("Nenhum horário disponível — confira o expediente em Configurações.");
+      return;
+    }
 
     startTransition(async () => {
       const resultado = await criarAgendamentoAvulso(petshopId, {
         tutor_id: tutorId,
         pet_id: petId,
         servico_id: servicoId,
-        data_hora: new Date(dataHora).toISOString(),
+        data_hora: combinarDataHorario(data, horario).toISOString(),
       });
       if (resultado.ok) {
         onDone();
@@ -509,20 +725,39 @@ function AvulsaForm({
           ))}
         </select>
       </FormField>
-      <FormField label="Data e horário" htmlFor="avulsa_data_hora">
+      <FormField label="Data" htmlFor="avulsa_data">
         <input
-          id="avulsa_data_hora"
-          type="datetime-local"
+          id="avulsa_data"
+          type="date"
           className={inputClass}
-          value={dataHora}
-          onChange={(e) => setDataHora(e.target.value)}
+          value={data}
+          onChange={(e) => setData(e.target.value)}
         />
+      </FormField>
+      <FormField
+        label="Horário"
+        htmlFor="avulsa_horario"
+        hint={horarios.length === 0 ? "Confira o expediente em Configurações." : undefined}
+      >
+        <select
+          id="avulsa_horario"
+          className={inputClass}
+          value={horario}
+          onChange={(e) => setHorario(e.target.value)}
+          disabled={horarios.length === 0}
+        >
+          {horarios.map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
       </FormField>
 
       <div className="flex items-center gap-3 sm:col-span-2">
         <button
           type="submit"
-          disabled={pending || petsDoTutor.length === 0}
+          disabled={pending || petsDoTutor.length === 0 || horarios.length === 0}
           className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
         >
           {pending ? "Agendando…" : "Agendar visita avulsa"}

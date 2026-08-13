@@ -16,6 +16,13 @@ export default async function TutoresPage() {
 
   const supabase = createClient();
   const petshopId = contexto.petshop.id;
+  const expediente = {
+    hora_abertura: contexto.petshop.hora_abertura,
+    hora_fechamento: contexto.petshop.hora_fechamento,
+    hora_inicio_intervalo: contexto.petshop.hora_inicio_intervalo,
+    hora_fim_intervalo: contexto.petshop.hora_fim_intervalo,
+    intervalo_agendamento_minutos: contexto.petshop.intervalo_agendamento_minutos,
+  };
 
   // pets e contatos_adicionais nao precisam de .eq("petshop_id", ...) pra
   // ficarem isolados — a policy de RLS (isolamento_petshop) ja filtra, mas o
@@ -55,6 +62,7 @@ export default async function TutoresPage() {
       <div className="mt-8">
         <TutoresSection
           petshopId={petshopId}
+          expediente={expediente}
           portes={(portes as Porte[]) ?? []}
           tutores={(tutores as Tutor[]) ?? []}
           pets={(pets as Pet[]) ?? []}

@@ -23,6 +23,15 @@ qualquer decisão de negócio nova — tipo a de falta que originou este arquivo
 | Início do intervalo | `hora_inicio_intervalo` | time | *nulo* | Pausa pro almoço. Fica `null` se o petshop não para. |
 | Fim do intervalo | `hora_fim_intervalo` | time | *nulo* | Idem. |
 | Corte manhã/tarde | `hora_divisao_periodo` | time | 12:00 | Define o que conta como "agendamento de manhã" x "de tarde" pros checkpoints de confirmação (seção 2). |
+| Intervalo entre horários | `intervalo_agendamento_minutos` | smallint | 60 | Espaçamento da grade de horários oferecida ao agendar visita avulsa, reagendar, ou escolher o horário preferencial de uma assinatura (`lib/horarios.ts`) — ver seção 8. |
+
+> **Sobre a grade de horários (`intervalo_agendamento_minutos`)**: restringe
+> a UI a horários "redondos" dentro do expediente (evita 09:07), mas ainda
+> **não** faz nenhuma checagem de capacidade — mais de um pet pode cair no
+> mesmo horário sem aviso. Duração por serviço/porte e limite de vagas
+> simultâneas por horário são evolução natural disso, mas ficaram de fora
+> de propósito na primeira versão (`supabase/migrations/0004_intervalo_agendamento.sql`)
+> pra não misturar "grade de horários" com "capacidade" na mesma mudança.
 
 ## 2. Janela de mensagens (confirmação D-1)
 
@@ -199,3 +208,17 @@ assinar". Ver `supabase/migrations/0003_fase4_assinaturas_agenda.sql`.
   nem avulsa) não virou tabela nova — é só um filtro na tela de Agenda
   (tutor sem assinatura e sem agendamento avulso), útil pra equipe saber
   quem ainda não fechou a primeira visita.
+- O horário da visita avulsa (e o horário preferencial da assinatura, e o
+  reagendamento) vêm da grade fixa da seção 1 (`intervalo_agendamento_minutos`),
+  não de um campo de texto livre — ver `lib/horarios.ts`.
+
+### Próximo passo natural: duração por serviço/porte + capacidade
+
+Hoje a grade de horários (seção 1) só evita horário quebrado — não impede
+dois pets grandes caindo no mesmo horário se o petshop só tem uma banheira,
+por exemplo. Quando algum petshop parceiro precisar disso de verdade, os
+candidatos a virar coluna/tabela são: duração estimada por combinação
+serviço × porte (hoje só existe preço por essa combinação, em
+`precos_servico`), e um limite de atendimentos simultâneos (por petshop, ou
+por horário). Nenhum dos dois existe ainda — registrado aqui pra não se
+perder quando a demanda aparecer.

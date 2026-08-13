@@ -23,6 +23,7 @@ export type PetshopConfigInput = Pick<
   | "hora_inicio_intervalo"
   | "hora_fim_intervalo"
   | "hora_divisao_periodo"
+  | "intervalo_agendamento_minutos"
   | "horario_envio_lembrete"
   | "horario_corte_confirmacao_manha"
   | "horario_corte_confirmacao_tarde"

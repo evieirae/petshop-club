@@ -93,9 +93,27 @@ dois:
 - **"Sem agendamento ainda"** ficou de propósito sem tabela nova — é um
   filtro na consulta da Agenda (tutor sem assinatura e sem agendamento
   avulso), não um novo conceito de dado.
+- **Grade de horários fixos** — `supabase/migrations/0004_intervalo_agendamento.sql`
+  adiciona `petshops.intervalo_agendamento_minutos` (editável em
+  Configurações, padrão 60min). Agendar avulsa, reagendar e escolher o
+  horário preferencial de uma assinatura agora oferecem só os horários
+  válidos dentro do expediente (`lib/horarios.ts`), em vez de campo livre.
+  Ainda sem checagem de capacidade — ver seção 8 de
+  `docs/regras_padrao_petshop.md` pra próximos passos (duração por
+  serviço/porte, limite de vagas simultâneas).
 
 Toda a migration foi testada direto no projeto Supabase (avulsa, ciclo de
 assinatura, pausa/retomada, split de cobrança) antes de entrar no repo.
+
+**Revisão 2 da Fase 4 — quadro semanal**: a Agenda deixou de ser só "hoje" e
+virou um quadro (linhas = horários da grade, colunas = domingo a sábado),
+navegável pra semanas passadas/futuras via `?data=YYYY-MM-DD` na URL
+(`lib/semana.ts`) — sem mecanismo de fetch novo, é `<Link>` mudando a query
+string e o Server Component (`app/(app)/agenda/page.tsx`) re-renderiza com o
+range certo. Clicar numa visita no quadro abre o painel de ações
+(confirmar/pronto/entregue/faltou/cancelar/reagendar) embaixo; clicar em
+"+ novo" numa célula vazia abre o formulário de avulsa já com dia e horário
+daquela célula preenchidos.
 
 ## Fase 5 — Lembretes automáticos via WhatsApp
 
