@@ -12,6 +12,9 @@ export type CadastroPetInput = {
   porte_id: number;
   raca: string | null;
   observacoes: string | null;
+  // Migration 0008 — usado pra concordância de gênero nas mensagens
+  // automáticas (ex.: pet_pronto). Null = não informado.
+  sexo: "macho" | "femea" | null;
 };
 
 export type CadastroInput = {
@@ -91,6 +94,7 @@ export async function enviarCadastro(
           porte_id: pet.porte_id,
           raca: pet.raca?.trim() || null,
           observacoes: pet.observacoes?.trim() || null,
+          sexo: pet.sexo,
         })
         .eq("id", pet.id)
         .eq("tutor_id", tutorId);
@@ -107,6 +111,7 @@ export async function enviarCadastro(
         porte_id: pet.porte_id,
         raca: pet.raca?.trim() || null,
         observacoes: pet.observacoes?.trim() || null,
+        sexo: pet.sexo,
       });
 
       if (error) {

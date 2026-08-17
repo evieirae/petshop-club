@@ -1,0 +1,15 @@
+project_id = "petshop-club"
+
+[functions.enviar-lembretes]
+# Quem chama essa function é o pg_cron via pg_net (job "lembretes-enviar",
+# ver supabase/migrations/0005_fase5_lembretes_whatsapp.sql), sem JWT de
+# usuário — a autenticação vira só o header x-cron-secret conferido dentro
+# da function contra o secret CRON_SECRET.
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+# Quem chama é a Meta, da internet aberta — não tem como mandar JWT do
+# Supabase. A autenticação é a assinatura HMAC-SHA256 do corpo
+# (X-Hub-Signature-256, conferida contra META_APP_SECRET dentro da
+# function), mais o hub.verify_token na chamada GET de verificação.
+verify_jwt = false

@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/Badge";
 import { LogoutButton } from "./LogoutButton";
 import type { Petshop, UsuarioPetshop } from "@/types/database";
 
@@ -9,15 +10,17 @@ export function Topbar({
   petshop: Petshop;
 }) {
   return (
-    <header className="flex items-center justify-between border-b border-surface-border bg-surface-card px-6 py-3">
+    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-surface-border bg-surface-card/95 px-6 py-3 backdrop-blur">
       <div>
         <p className="text-sm font-medium text-ink-900">{petshop.nome}</p>
-        <p className="text-xs text-ink-500">
-          {usuario.nome} · {usuario.papel === "dono" ? "Dono(a)" : "Atendente"}
+        <p className="flex items-center gap-2 text-xs text-ink-500">
+          <span>
+            {usuario.nome} · {usuario.papel === "dono" ? "Dono(a)" : "Atendente"}
+          </span>
           {usuario.eh_admin_plataforma && (
-            <span className="ml-2 rounded-stamp bg-club-light px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-club-dark">
+            <Badge tom="info" className="uppercase tracking-wide">
               Admin
-            </span>
+            </Badge>
           )}
         </p>
       </div>

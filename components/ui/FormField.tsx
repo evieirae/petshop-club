@@ -1,7 +1,12 @@
-// Mesma classe usada no input do login (app/(auth)/login/page.tsx) — mantem
-// os dois formularios do app com a mesma cara.
-export const inputClass =
-  "w-full rounded-lg border border-surface-border bg-surface-card px-3 py-2 text-sm text-ink-900 disabled:cursor-not-allowed disabled:opacity-60";
+import { cx, formulario } from "@/lib/ui/styles";
+
+/**
+ * Classe de input/select/textarea.
+ *
+ * Mantida como export nomeado porque as telas já importam `inputClass` daqui —
+ * mas a definição de verdade mora em lib/ui/styles.ts (`formulario.input`).
+ */
+export const inputClass = formulario.input;
 
 export function FormField({
   label,
@@ -20,18 +25,32 @@ export function FormField({
 }) {
   return (
     <div className={full ? "sm:col-span-2" : undefined}>
-      <label
-        htmlFor={htmlFor}
-        className="mb-1 block text-sm font-medium text-ink-700"
-      >
+      <label htmlFor={htmlFor} className={formulario.label}>
         {label}
       </label>
       {children}
       {error ? (
-        <p className="mt-1 text-xs text-pendente">{error}</p>
+        <p className={formulario.erro} role="alert">
+          {error}
+        </p>
       ) : (
-        hint && <p className="mt-1 text-xs text-ink-500">{hint}</p>
+        hint && <p className={formulario.dica}>{hint}</p>
       )}
     </div>
+  );
+}
+
+/** Input já com a classe padrão — em telas novas evita repetir o className. */
+export function Input({
+  erro,
+  className,
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement> & { erro?: boolean }) {
+  return (
+    <input
+      {...rest}
+      aria-invalid={erro || undefined}
+      className={cx(formulario.input, erro && formulario.inputErro, className)}
+    />
   );
 }

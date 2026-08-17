@@ -1,5 +1,8 @@
 "use client";
 
+import { botao } from "@/lib/ui/styles";
+import { Badge } from "@/components/ui/Badge";
+import type { TomBadge } from "@/lib/ui/styles";
 import { useState, useTransition, type FormEvent } from "react";
 import type {
   Assinatura,
@@ -66,14 +69,11 @@ const PAPEIS: { value: PapelContato; label: string; hint: string }[] = [
 ];
 
 function CadastroBadge({ completo }: { completo: boolean }) {
+  // "Pendente" é amarelo, não vermelho: é uma tarefa em aberto, não um erro.
   return (
-    <span
-      className={`rounded-stamp px-2 py-0.5 text-xs font-medium ${
-        completo ? "bg-confirmado-bg text-confirmado" : "bg-pendente-bg text-pendente"
-      }`}
-    >
+    <Badge tom={completo ? "sucesso" : "atencao"} ponto={!completo}>
       {completo ? "Cadastro completo" : "Cadastro pendente"}
-    </span>
+    </Badge>
   );
 }
 
@@ -111,7 +111,7 @@ export function TutoresSection({
         <button
           type="button"
           onClick={() => setCriando((v) => !v)}
-          className="rounded-lg border border-club px-4 py-2 text-sm font-medium text-club-dark transition hover:bg-club-light"
+          className={botao({ variante: criando ? "neutra" : "cta" })}
         >
           {criando ? "Cancelar" : "+ Novo tutor"}
         </button>
@@ -131,7 +131,7 @@ export function TutoresSection({
             itens={[
               "O tutor preenche nome, endereço e pets pelo próprio link",
               "Contato adicional por papel — ex.: quem busca o pet, se for diferente de quem agenda",
-              "O envio automático do link por WhatsApp chega na Fase 5 do roadmap; por enquanto, copie e mande na mão",
+              "O link também sai sozinho por WhatsApp assim que o tutor é cadastrado — copiar e mandar na mão é só o atalho",
             ]}
           />
         ) : (
@@ -185,7 +185,7 @@ function NovoTutorForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 rounded-xl border border-dashed border-club bg-club-light/30 p-5 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:grid-cols-2"
     >
       <FormField
         label="Telefone"
@@ -218,7 +218,7 @@ function NovoTutorForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao()}
         >
           {pending ? "Adicionando…" : "Adicionar tutor"}
         </button>
@@ -226,7 +226,7 @@ function NovoTutorForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
           Depois de criar, copie o link de autopreenchimento pra mandar pro tutor.
         </p>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}
@@ -270,11 +270,11 @@ function CopiarLinkButton({ tutorId }: { tutorId: string }) {
         type="button"
         disabled={pending}
         onClick={handleClick}
-        className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark disabled:opacity-60"
+        className={botao({ variante: "neutra", tamanho: "sm" })}
       >
         {copiado ? "Link copiado!" : "Copiar link de cadastro"}
       </button>
-      {erro && <p className="max-w-xs text-right text-xs text-pendente">{erro}</p>}
+      {erro && <p className="max-w-xs text-right text-xs text-danger-600">{erro}</p>}
     </div>
   );
 }
@@ -320,7 +320,7 @@ function TutorCard({
           <button
             type="button"
             onClick={() => setExpandido((v) => !v)}
-            className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+            className={botao({ variante: "neutra", tamanho: "sm" })}
           >
             {expandido ? "Fechar" : "Detalhes"}
           </button>
@@ -426,7 +426,7 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
             type="checkbox"
             checked={cadastroCompleto}
             onChange={(e) => setCadastroCompleto(e.target.checked)}
-            className="h-4 w-4 rounded border-surface-border text-club focus:ring-club"
+            className="h-4 w-4 rounded border-surface-border text-brand-500 focus:ring-brand-500"
           />
           Cadastro completo
           <span className="text-xs text-ink-500">
@@ -439,13 +439,13 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao()}
         >
           {pending ? "Salvando…" : "Salvar dados do tutor"}
         </button>
-        {salvo && <p className="text-sm text-confirmado">Salvo.</p>}
+        {salvo && <p className="text-sm text-success-700">Salvo.</p>}
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}
@@ -480,7 +480,7 @@ function PetsSubsection({
         <button
           type="button"
           onClick={() => setAdicionando((v) => !v)}
-          className="text-xs font-medium text-club-dark hover:underline"
+          className="text-xs font-medium text-brand-700 hover:underline"
         >
           {adicionando ? "Cancelar" : "+ Adicionar pet"}
         </button>
@@ -538,6 +538,7 @@ function PetForm({
   const [porteId, setPorteId] = useState(pet?.porte_id ?? portes[0]?.id ?? 0);
   const [raca, setRaca] = useState(pet?.raca ?? "");
   const [observacoes, setObservacoes] = useState(pet?.observacoes ?? "");
+  const [sexo, setSexo] = useState<"macho" | "femea" | "">(pet?.sexo ?? "");
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
 
@@ -555,6 +556,7 @@ function PetForm({
       porte_id: porteId,
       raca: raca.trim() || null,
       observacoes: observacoes.trim() || null,
+      sexo: sexo || null,
     };
 
     startTransition(async () => {
@@ -573,7 +575,7 @@ function PetForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-club bg-club-light/30 p-4 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-3 rounded-lg border border-brand-200 bg-brand-50/60 p-4 sm:grid-cols-2"
     >
       <FormField label="Nome do pet" htmlFor={`pet_nome_${pet?.id ?? "novo"}_${tutorId}`}>
         <input
@@ -607,6 +609,22 @@ function PetForm({
         />
       </FormField>
       <FormField
+        label="Sexo"
+        htmlFor={`pet_sexo_${pet?.id ?? "novo"}_${tutorId}`}
+        hint="Opcional — usado pra deixar as mensagens automáticas certas (ex.: 'pronto'/'pronta')."
+      >
+        <select
+          id={`pet_sexo_${pet?.id ?? "novo"}_${tutorId}`}
+          className={inputClass}
+          value={sexo}
+          onChange={(e) => setSexo(e.target.value as "macho" | "femea" | "")}
+        >
+          <option value="">Não informado</option>
+          <option value="macho">Macho</option>
+          <option value="femea">Fêmea</option>
+        </select>
+      </FormField>
+      <FormField
         label="Observações"
         htmlFor={`pet_obs_${pet?.id ?? "novo"}_${tutorId}`}
         hint="Temperamento, alergias, restrições…"
@@ -623,7 +641,7 @@ function PetForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-3 py-1.5 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao({ tamanho: "sm" })}
         >
           {pending ? "Salvando…" : pet ? "Salvar" : "Adicionar pet"}
         </button>
@@ -637,7 +655,7 @@ function PetForm({
           </button>
         )}
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}
@@ -701,7 +719,7 @@ function PetRow({
           <button
             type="button"
             onClick={() => setMostrarAssinatura((v) => !v)}
-            className="text-xs font-medium text-club-dark hover:underline"
+            className="text-xs font-medium text-brand-700 hover:underline"
           >
             {mostrarAssinatura
               ? "Fechar assinatura"
@@ -712,7 +730,7 @@ function PetRow({
           <button
             type="button"
             onClick={() => setEditando(true)}
-            className="text-xs font-medium text-club-dark hover:underline"
+            className="text-xs font-medium text-brand-700 hover:underline"
           >
             Editar
           </button>
@@ -726,13 +744,13 @@ function PetRow({
                 if (!resultado.ok) setErro(resultado.erro);
               })
             }
-            className="text-xs font-medium text-pendente hover:underline disabled:opacity-60"
+            className={botao({ variante: "textoPerigo", tamanho: "sm" })}
           >
             Remover
           </button>
         </div>
       </div>
-      {erro && <p className="mt-1 text-xs text-pendente">{erro}</p>}
+      {erro && <p className="mt-1 text-xs text-danger-600">{erro}</p>}
 
       {mostrarAssinatura && (
         <div className="mt-3 border-t border-surface-border pt-3">
@@ -757,16 +775,13 @@ const LABEL_STATUS_ASSINATURA: Record<StatusAssinatura, string> = {
 };
 
 function AssinaturaStatusBadge({ status }: { status: StatusAssinatura }) {
-  const estilos: Record<StatusAssinatura, string> = {
-    ativa: "bg-confirmado-bg text-confirmado",
-    pausada: "bg-pendente-bg text-pendente",
-    cancelada: "bg-surface text-ink-500",
+  const tons: Record<StatusAssinatura, TomBadge> = {
+    ativa: "sucesso",
+    // Pausada não é falha — é uma decisão do tutor que pode ser revertida.
+    pausada: "atencao",
+    cancelada: "neutro",
   };
-  return (
-    <span className={`rounded-stamp px-2 py-0.5 text-xs font-medium ${estilos[status]}`}>
-      {LABEL_STATUS_ASSINATURA[status]}
-    </span>
-  );
+  return <Badge tom={tons[status]}>{LABEL_STATUS_ASSINATURA[status]}</Badge>;
 }
 
 function AssinaturaBlock({
@@ -827,7 +842,7 @@ function AssinaturaBlock({
           <button
             type="button"
             onClick={() => setCriando(true)}
-            className="text-xs font-medium text-club-dark hover:underline"
+            className="text-xs font-medium text-brand-700 hover:underline"
           >
             {assinatura ? "+ Nova assinatura" : "+ Criar assinatura"}
           </button>
@@ -857,7 +872,7 @@ function AssinaturaAcoes({ assinatura }: { assinatura: Assinatura }) {
           type="button"
           disabled={pending}
           onClick={() => executar(pausarAssinatura)}
-          className="text-xs font-medium text-club-dark hover:underline disabled:opacity-60"
+          className="text-xs font-medium text-brand-700 hover:underline disabled:opacity-60"
         >
           Pausar
         </button>
@@ -867,7 +882,7 @@ function AssinaturaAcoes({ assinatura }: { assinatura: Assinatura }) {
           type="button"
           disabled={pending}
           onClick={() => executar(retomarAssinatura)}
-          className="text-xs font-medium text-club-dark hover:underline disabled:opacity-60"
+          className="text-xs font-medium text-brand-700 hover:underline disabled:opacity-60"
         >
           Retomar
         </button>
@@ -876,11 +891,11 @@ function AssinaturaAcoes({ assinatura }: { assinatura: Assinatura }) {
         type="button"
         disabled={pending}
         onClick={() => executar(cancelarAssinatura)}
-        className="text-xs font-medium text-pendente hover:underline disabled:opacity-60"
+        className={botao({ variante: "textoPerigo", tamanho: "sm" })}
       >
         Cancelar assinatura
       </button>
-      {erro && <p className="text-xs text-pendente">{erro}</p>}
+      {erro && <p className="text-xs text-danger-600">{erro}</p>}
     </div>
   );
 }
@@ -911,7 +926,7 @@ function AssinaturaForm({
 
   if (planosAtivos.length === 0) {
     return (
-      <p className="text-xs text-pendente">
+      <p className="text-xs text-danger-600">
         Nenhum plano ativo — cadastre um em Planos &amp; Serviços antes de criar uma assinatura.
       </p>
     );
@@ -950,7 +965,7 @@ function AssinaturaForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-club bg-club-light/30 p-4 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-3 rounded-lg border border-brand-200 bg-brand-50/60 p-4 sm:grid-cols-2"
     >
       <FormField label="Plano" htmlFor={`assinatura_plano_${petId}`}>
         <select
@@ -1017,12 +1032,12 @@ function AssinaturaForm({
         <button
           type="submit"
           disabled={pending || horarios.length === 0}
-          className="rounded-lg bg-club px-3 py-1.5 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao({ tamanho: "sm" })}
         >
           {pending ? "Criando…" : "Criar assinatura"}
         </button>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}
@@ -1120,7 +1135,7 @@ function ContatoPapelRow({
     return (
       <form
         onSubmit={handleSalvar}
-        className="grid grid-cols-1 gap-2 rounded-lg border border-dashed border-club bg-club-light/30 p-3 sm:grid-cols-[1fr_1fr_auto]"
+        className="grid grid-cols-1 gap-2 rounded-lg border border-brand-200 bg-brand-50/60 p-3 sm:grid-cols-[1fr_1fr_auto]"
       >
         <input
           className={inputClass}
@@ -1140,7 +1155,7 @@ function ContatoPapelRow({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-club px-3 py-1.5 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+            className={botao({ tamanho: "sm" })}
           >
             Salvar
           </button>
@@ -1153,7 +1168,7 @@ function ContatoPapelRow({
           </button>
         </div>
         {erro && (
-          <p role="alert" className="text-xs text-pendente sm:col-span-3">
+          <p role="alert" className="text-xs text-danger-600 sm:col-span-3">
             {erro}
           </p>
         )}
@@ -1173,7 +1188,7 @@ function ContatoPapelRow({
         <button
           type="button"
           onClick={() => setEditando(true)}
-          className="text-xs font-medium text-club-dark hover:underline"
+          className="text-xs font-medium text-brand-700 hover:underline"
         >
           {contato ? "Editar" : "Adicionar"}
         </button>
@@ -1182,13 +1197,13 @@ function ContatoPapelRow({
             type="button"
             disabled={pending}
             onClick={handleRemover}
-            className="text-xs font-medium text-pendente hover:underline disabled:opacity-60"
+            className={botao({ variante: "textoPerigo", tamanho: "sm" })}
           >
             Remover
           </button>
         )}
       </div>
-      {erro && <p className="text-xs text-pendente">{erro}</p>}
+      {erro && <p className="text-xs text-danger-600">{erro}</p>}
     </div>
   );
 }

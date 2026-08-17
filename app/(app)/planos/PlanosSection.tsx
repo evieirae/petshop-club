@@ -1,5 +1,7 @@
 "use client";
 
+import { alerta, botao } from "@/lib/ui/styles";
+import { Badge } from "@/components/ui/Badge";
 import { useState, useTransition, type FormEvent } from "react";
 import type { CategoriaServico, Plano, PlanoPreco, PlanoServico, Porte, Servico } from "@/types/database";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,15 +15,9 @@ import {
 } from "./actions";
 
 function AtivoBadge({ ativo }: { ativo: boolean }) {
-  return (
-    <span
-      className={`rounded-stamp px-2 py-0.5 text-xs font-medium ${
-        ativo ? "bg-confirmado-bg text-confirmado" : "bg-pendente-bg text-pendente"
-      }`}
-    >
-      {ativo ? "Ativo" : "Inativo"}
-    </span>
-  );
+  // Inativo é neutro, não vermelho: desligar um serviço é uma escolha do
+  // petshop, e o vermelho fica reservado pra coisa que deu errado de verdade.
+  return <Badge tom={ativo ? "sucesso" : "neutro"}>{ativo ? "Ativo" : "Inativo"}</Badge>;
 }
 
 // Mesma regra de app/(app)/planos/ServicosSection.tsx (nomeExibicao): nome
@@ -72,14 +68,14 @@ export function PlanosSection({
           disabled={semServicos}
           onClick={() => setCriando((v) => !v)}
           title={semServicos ? "Cadastre pelo menos um serviço antes de criar um plano." : undefined}
-          className="rounded-lg border border-club px-4 py-2 text-sm font-medium text-club-dark transition hover:bg-club-light disabled:cursor-not-allowed disabled:opacity-40"
+          className={botao({ variante: criando ? "neutra" : "cta" })}
         >
           {criando ? "Cancelar" : "+ Novo plano"}
         </button>
       </div>
 
       {semServicos && (
-        <p className="mt-3 rounded-lg bg-pendente-bg px-3 py-2 text-xs text-pendente">
+        <p className={alerta("atencao", "mt-3 text-xs")}>
           Cadastre pelo menos um serviço na seção acima antes de montar um
           plano — todo plano é uma combinação de serviços já existentes.
         </p>
@@ -160,7 +156,7 @@ function NovoPlanoForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 rounded-xl border border-dashed border-club bg-club-light/30 p-5 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:grid-cols-2"
     >
       <FormField label="Nome do plano" htmlFor="novo_plano_nome" full>
         <input
@@ -206,7 +202,7 @@ function NovoPlanoForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao()}
         >
           {pending ? "Adicionando…" : "Adicionar plano"}
         </button>
@@ -214,7 +210,7 @@ function NovoPlanoForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
           Depois de criar, edite pra escolher os serviços e o preço por porte.
         </p>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}
@@ -291,7 +287,7 @@ function PlanoCard({
           <button
             type="button"
             onClick={() => setEditando(true)}
-            className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+            className={botao({ variante: "neutra", tamanho: "sm" })}
           >
             Editar
           </button>
@@ -315,7 +311,7 @@ function AtivoToggleButton({
       type="button"
       disabled={pending}
       onClick={() => startTransition(async () => { await onToggle(!ativo); })}
-      className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark disabled:opacity-60"
+      className={botao({ variante: "neutra", tamanho: "sm" })}
     >
       {ativo ? "Desativar" : "Ativar"}
     </button>
@@ -427,7 +423,7 @@ function PlanoEditForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 rounded-xl border border-club bg-surface-card p-5 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:grid-cols-2"
     >
       <FormField label="Nome do plano" htmlFor={`plano_nome_${plano.id}`} full>
         <input
@@ -474,11 +470,11 @@ function PlanoEditForm({
                   type="checkbox"
                   checked={selecionados.has(servico.id)}
                   onChange={() => alternarServico(servico.id)}
-                  className="h-4 w-4 rounded border-surface-border text-club focus:ring-club"
+                  className="h-4 w-4 rounded border-surface-border text-brand-500 focus:ring-brand-500"
                 />
                 {nomeServico(servico, categorias)}
                 {!servico.ativo && (
-                  <span className="text-xs text-pendente">(inativo)</span>
+                  <span className="text-xs text-danger-600">(inativo)</span>
                 )}
               </label>
             ))}
@@ -524,7 +520,7 @@ function PlanoEditForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao()}
         >
           {pending ? "Salvando…" : "Salvar"}
         </button>
@@ -536,7 +532,7 @@ function PlanoEditForm({
           Cancelar
         </button>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowUpRight } from "lucide-react";
+import { cx, superficie } from "@/lib/ui/styles";
 
 export function NavCard({
   href,
@@ -14,17 +15,14 @@ export function NavCard({
   descricao: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex flex-col gap-3 rounded-xl border border-surface-border bg-surface-card p-5 transition hover:border-club"
-    >
+    <Link href={href} className={cx("group flex flex-col gap-3 p-5", superficie.cardInterativo)}>
       <div className="flex items-start justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-club-light text-club-dark">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-500 group-hover:text-white">
           <Icon size={18} aria-hidden="true" />
         </div>
         <ArrowUpRight
           size={16}
-          className="text-ink-500 opacity-0 transition group-hover:opacity-100"
+          className="text-brand-500 opacity-0 transition-opacity group-hover:opacity-100"
           aria-hidden="true"
         />
       </div>

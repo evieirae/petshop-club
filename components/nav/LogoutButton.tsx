@@ -1,5 +1,6 @@
 "use client";
 
+import { botao } from "@/lib/ui/styles";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -15,10 +16,7 @@ export function LogoutButton() {
   }
 
   return (
-    <button
-      onClick={handleClick}
-      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-500 transition hover:bg-surface-card hover:text-ink-900"
-    >
+    <button onClick={handleClick} className={botao({ variante: "neutra" })}>
       <LogOut size={16} aria-hidden="true" />
       Sair
     </button>

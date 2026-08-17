@@ -1,8 +1,10 @@
+import { Logo } from "@/components/brand/Logo";
 import { redirect } from "next/navigation";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { Topbar } from "@/components/nav/Topbar";
 import { LogoutButton } from "@/components/nav/LogoutButton";
+import { superficie } from "@/lib/ui/styles";
 
 export default async function AppLayout({
   children,
@@ -22,7 +24,10 @@ export default async function AppLayout({
   if (!contexto.usuario || !contexto.petshop) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
-        <div className="max-w-sm text-center">
+        <div className={`max-w-sm text-center ${superficie.cardPadded}`}>
+          <div className="mb-5 flex justify-center">
+            <Logo tamanho="md" />
+          </div>
           <h1 className="font-display text-xl text-ink-900">
             Acesso pendente
           </h1>

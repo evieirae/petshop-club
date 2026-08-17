@@ -2,21 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  As CSS variables (--color-brand-500, --color-ink-900, ...) são injetadas em
+  :root pelo plugin de tailwind.config.ts, que lê lib/design/tokens.ts. Não
+  declare cor nenhuma neste arquivo — se precisar de uma, adicione o token lá.
+*/
+
 @layer base {
   * {
     @apply border-surface-border;
   }
 
-  ::selection {
-    @apply bg-club-light text-ink-900;
+  html {
+    scroll-behavior: smooth;
   }
 
-  /* Foco de teclado visivel em qualquer elemento interativo — nunca so no hover. */
+  body {
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-ink-900;
+  }
+
+  /* Foco de teclado visível em qualquer elemento interativo — nunca só no hover. */
   a:focus-visible,
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
-  textarea:focus-visible {
-    @apply outline-none ring-2 ring-club ring-offset-2 ring-offset-surface;
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface;
+  }
+
+  /* Números tabulares alinham em colunas de valores e horários. */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Respeita quem desligou animação no sistema. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

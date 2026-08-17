@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/brand/Logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,13 +10,18 @@ import {
   Repeat,
   Settings,
   ShieldCheck,
+  Wallet,
 } from "lucide-react";
+import { cx } from "@/lib/ui/styles";
 
 const ITENS = [
   { href: "/", label: "Visão geral", icon: LayoutGrid },
   { href: "/agenda", label: "Agenda", icon: CalendarCheck },
   { href: "/tutores", label: "Tutores & Pets", icon: Users },
   { href: "/planos", label: "Planos & Serviços", icon: Repeat },
+  // Fase 6 (docs/fase6_pagamentos.md) — rascunho, só funciona depois da
+  // migration 0006 ser aplicada de verdade (ver aviso na própria página).
+  { href: "/financeiro", label: "Financeiro", icon: Wallet },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
@@ -31,26 +37,9 @@ export function Sidebar({ ehAdminPlataforma }: { ehAdminPlataforma: boolean }) {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-surface-border bg-surface-card px-3 py-6">
-      <div className="mb-8 flex items-center gap-2 px-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-stamp border-2 border-dashed border-club text-club">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            aria-hidden="true"
-          >
-            <path d="M12 21c-4-3.2-8-6.6-8-11a5 5 0 0 1 8-4 5 5 0 0 1 8 4c0 4.4-4 7.8-8 11Z" />
-          </svg>
-        </div>
-        <span className="font-display text-sm leading-tight text-ink-900">
-          Clube de
-          <br />
-          Banho e Tosa
-        </span>
-      </div>
+      <Link href="/" className="mb-8 rounded-lg px-2 py-1" aria-label="PetClub — início">
+        <Logo tamanho="sm" />
+      </Link>
 
       <nav className="flex flex-1 flex-col gap-1">
         {itens.map(({ href, label, icon: Icon }) => {
@@ -59,11 +48,15 @@ export function Sidebar({ ehAdminPlataforma }: { ehAdminPlataforma: boolean }) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+              aria-current={ativo ? "page" : undefined}
+              className={cx(
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 ativo
-                  ? "bg-club-light font-medium text-ink-900"
-                  : "text-ink-500 hover:bg-surface hover:text-ink-900"
-              }`}
+                  ? // Barra azul à esquerda + fundo azul suave: o item ativo se
+                    // identifica por posição e cor, não só por peso da fonte.
+                    "bg-brand-50 font-medium text-brand-700 before:absolute before:left-0 before:top-1.5 before:h-[calc(100%-0.75rem)] before:w-0.5 before:rounded-pill before:bg-brand-500"
+                  : "text-ink-500 hover:bg-surface-muted-muted hover:text-ink-900",
+              )}
             >
               <Icon size={17} aria-hidden="true" />
               {label}

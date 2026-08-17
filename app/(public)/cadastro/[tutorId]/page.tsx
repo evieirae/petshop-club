@@ -1,3 +1,4 @@
+import { Logo } from "@/components/brand/Logo";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ContatoAdicional, Pet, Porte, Tutor } from "@/types/database";
@@ -36,19 +37,7 @@ export default async function CadastroTutorPage({
     <main className="flex min-h-screen justify-center px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-6 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-stamp border-2 border-dashed border-club text-club">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              aria-hidden="true"
-            >
-              <path d="M12 21c-4-3.2-8-6.6-8-11a5 5 0 0 1 8-4 5 5 0 0 1 8 4c0 4.4-4 7.8-8 11Z" />
-            </svg>
-          </div>
+          <Logo tamanho="lg" />
         </div>
 
         <h1 className="text-center font-display text-2xl text-ink-900">

@@ -1,6 +1,7 @@
 import { CalendarCheck, Users, Repeat, Settings } from "lucide-react";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { NavCard } from "@/components/ui/NavCard";
+import { texto } from "@/lib/ui/styles";
 
 export default async function VisaoGeralPage() {
   const contexto = await getUsuarioContext();
@@ -8,10 +9,10 @@ export default async function VisaoGeralPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl text-ink-900">
+      <h1 className={texto.tituloPagina}>
         {primeiroNome ? `Olá, ${primeiroNome}` : "Visão geral"}
       </h1>
-      <p className="mt-1 text-sm text-ink-500">
+      <p className={texto.subtitulo}>
         A fundação do painel está pronta — cada área abaixo ainda vai
         receber sua tela de verdade.
       </p>

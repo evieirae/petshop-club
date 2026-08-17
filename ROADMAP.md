@@ -1,4 +1,4 @@
-# Roadmap — Clube de Banho e Tosa
+# Roadmap — PetClub
 
 Passo a passo da fundação técnica atual até uma versão beta rodando com um
 petshop real. Pensado pra ser trabalhado fase por fase, cada uma numa
@@ -115,26 +115,165 @@ range certo. Clicar numa visita no quadro abre o painel de ações
 "+ novo" numa célula vazia abre o formulário de avulsa já com dia e horário
 daquela célula preenchidos.
 
-## Fase 5 — Lembretes automáticos via WhatsApp
+## Fase 5 — Lembretes automáticos via WhatsApp (Meta Cloud API)
 
-- [ ] Edge Function + `pg_cron` rodando nos horários configurados por
-      petshop (`horario_envio_lembrete`, cortes de confirmação manhã/tarde).
-- [ ] Integração com uma API de WhatsApp Business (Twilio, Z-API e Meta
-      Cloud API são as opções mais comuns no Brasil).
+- [x] Checkpoints diários em SQL + `pg_cron` rodando nos horários
+      configurados por petshop (`horario_envio_lembrete`, cortes de
+      confirmação manhã/tarde) —
+      `supabase/migrations/0005_fase5_lembretes_whatsapp.sql`.
+- [x] Envio pela **WhatsApp Cloud API da Meta** —
+      `supabase/functions/enviar-lembretes` + `_shared/meta-whatsapp.ts`.
+- [x] Webhook de status e de mensagens recebidas —
+      `supabase/functions/whatsapp-webhook`.
+- [ ] Templates aprovados no WhatsApp Manager (`docs/whatsapp_templates_meta.md`)
+      e teste ponta a ponta com número real.
 
-A tabela `lembretes` e os triggers já geram os registros pendentes (D-1,
-pet pronto, escalonamento, cadastro) — falta só o envio de fato.
+A tabela `lembretes` e os triggers já geravam os registros pendentes (D-1,
+pet pronto, escalonamento, cadastro) — esta fase implementou os 3
+checkpoints que só existiam como comentário-espec em `0001_init.sql` e o
+envio de fato.
+
+**Escolha do provedor**: a primeira versão desta fase foi escrita contra um
+provedor-intermediário (Twilio), no modo sandbox — simples de começar, mas
+com duas limitações que só apareceriam na Fase 7: cada mensagem paga a
+margem do intermediário além da tarifa da Meta, e o sandbox aceita texto
+livre, escondendo a regra de template que existe em produção. Refatorado
+pra Meta direto. O que a troca mudou de verdade:
+
+1. **Template obrigatório.** Toda mensagem nossa é business-initiated, então
+   só sai como template aprovado. Texto livre virou caminho de exceção, e a
+   fila `lembretes` ganhou `template_nome` pra registrar qual template
+   gerou cada envio.
+2. **Janela de 24h virou estado no banco.** Texto livre só vale nas 24h
+   seguintes a uma mensagem do cliente — informação que só chega por
+   webhook. Daí a tabela `janelas_whatsapp` e
+   `janela_whatsapp_aberta()`.
+3. **Webhook deixou de ser opcional.** O POST de envio responder 2xx só quer
+   dizer "a Meta aceitou"; entrega/leitura/falha chegam depois, assíncronas.
+   Por isso os status novos `entregue`/`lido` e as colunas
+   `entregue_em`/`lido_em`.
+4. **Confirmação por resposta.** Com o webhook lendo mensagens recebidas,
+   responder "sim" na conversa passou a confirmar a visita — a regra vive em
+   `confirmar_agendamento_por_whatsapp()`, em SQL, pra não virar uma
+   terceira cópia do que já existe na rota pública `/confirmar` e na tela de
+   Agenda.
+
+### Checklist operacional
+
+Nada disso é schema, então nada disso está em migration:
+
+1. **Conta na Meta**: app no [Meta for Developers](https://developers.facebook.com)
+   com o produto WhatsApp adicionado, número cadastrado e verificado no
+   WhatsApp Manager. Anote o **Phone Number ID** (não é o telefone).
+   **Status (16/ago/2026):** app "PetClub" criado — **App ID
+   `4526442457640626`** (um duplicado com outro App ID chegou a existir e
+   já foi removido; esse é o único válido daqui pra frente). Caso de uso
+   "Connect with customers through WhatsApp" selecionado. Parado no passo
+   seguinte — conectar um Business Portfolio, que exige nome legal do
+   negócio, endereço e telefone (dados só o Eduardo pode fornecer). Retomar
+   em developers.facebook.com/apps/4526442457640626.
+2. **Token permanente**: criar System User no Business Manager com a
+   permissão `whatsapp_business_messaging` e gerar token sem expiração. O
+   token que aparece no painel de teste expira em 24h — serve pro primeiro
+   `curl`, não pro cron.
+3. **Templates**: submeter os 4 de `docs/whatsapp_templates_meta.md` e
+   esperar aprovar. Antes disso todo envio falha.
+4. **Secrets das functions**:
+   ```
+   supabase secrets set \
+     META_PHONE_NUMBER_ID=... META_ACCESS_TOKEN=... META_APP_SECRET=... \
+     META_WEBHOOK_VERIFY_TOKEN=... META_GRAPH_VERSION=v21.0 \
+     APP_BASE_URL=https://seu-dominio CRON_SECRET=<valor-aleatorio>
+   ```
+5. **Deploy**: `supabase functions deploy enviar-lembretes` e
+   `supabase functions deploy whatsapp-webhook`.
+6. **Webhook na Meta**: no app > WhatsApp > Configuração, cadastrar
+   `https://<PROJECT_REF>.supabase.co/functions/v1/whatsapp-webhook` com o
+   mesmo `META_WEBHOOK_VERIFY_TOKEN`, e assinar os campos `messages` e
+   `message_status`.
+7. **Segredo do cron no Postgres** (uma vez, fora de migration):
+   `alter database postgres set app.cron_secret = '<mesmo-valor>';`
+8. **URL do job**: trocar `<PROJECT_REF>` no `cron.schedule` de
+   `lembretes-enviar` pela referência real do projeto (`cron.schedule` faz
+   upsert pelo nome do job — dá pra re-rodar só esse trecho).
+9. **Teste ponta a ponta**: marcar uma visita pra amanhã, adiantar
+   `horario_envio_lembrete`, esperar o job e conferir
+   `select status, template_nome, erro_envio, entregue_em from lembretes`.
+
+### Limites conhecidos
+
+- **Rate limit**: nenhum. O lote de 50 por rodada é suficiente pro volume de
+  teste, mas a Meta tem throughput por número e limite diário atrelado à
+  qualidade da conta — recalibrar na Fase 7.
+- **Retry**: um lembrete que falha fica `status='falhou'` e ninguém tenta de
+  novo. Consciente: retry automático sem backoff contra um número inválido
+  só queima reputação do número na Meta. Falha hoje é sinal pra alguém olhar.
+- **Fuso**: fixo em `America/Sao_Paulo`, sem coluna de timezone em
+  `petshops`.
+- **Multi-petshop**: um único número/Phone Number ID pra plataforma inteira.
+  Petshop com número próprio precisaria de credencial por petshop — cabe na
+  Fase 7 se algum parceiro exigir.
 
 ## Fase 6 — Cobrança com gateway de pagamento real
 
-- [ ] Tokenização de cartão e cobrança recorrente via gateway (Asaas,
-      Pagar.me ou Stripe são os mais usados pra split automático no
-      Brasil).
-- [ ] Split automático petshop/plataforma no momento da cobrança.
+**Plano detalhado em `docs/fase6_pagamentos.md`** (escrito antes de
+qualquer código, no espírito da Fase 5). Decisões já tomadas: meios da v1
+são cartão recorrente tokenizado + Pix por cobrança (Pix Automático e
+boleto ficam pra depois); portal do tutor entra com escopo "agendar +
+pagar"; gateway recomendado é o Asaas — decisão final depende da fatia 0
+(abrir conta, pedir habilitação de tokenização, confirmar taxas).
+
+- [ ] Fatia 0 — conta no gateway (**feito**, aprovada 16/ago), taxas reais
+      confirmadas (`docs/fase6_pagamentos.md`, seção 1b). Falta: verificar
+      e-mail da conta Sandbox (travado — só o Eduardo recebe o link),
+      gerar chave de API do sandbox, e pedir habilitação de tokenização em
+      produção. Abrir a conta em si não dava pra automatizar (CPF/CNPJ e
+      senha) — foi o Eduardo quem fez.
+- [x] (rascunho, não testado) Migration `0006` — status novos, retry,
+      `eventos_gateway`, trava de slot. Falta subconta do petshop (split)
+      via `/admin` — essa tela não foi tocada ainda.
+- [x] (rascunho, não testado) Decisão de 16/ago/2026: taxa de serviço
+      somada ao tutor, não descontada do petshop (`docs/fase6_pagamentos.md`,
+      seção 1c). Petshop recebe sempre `fixedValue` = valor cheio do
+      serviço; tutor paga serviço + taxa (corte da plataforma + taxa do
+      gateway). Implementado em: migration `0006` (colunas
+      `valor_taxa_gateway`/`valor_cobrado_tutor`, trigger
+      `trg_agendamento_processar_cobranca`), `_shared/asaas.ts` (split por
+      `fixedValue`), `processar-cobrancas/index.ts`
+      (`calcularComposicaoPreco`), portal do tutor (`agendar/[tutorId]/`,
+      mesma fórmula duplicada no client) e tela `/financeiro`.
+- [ ] Tokenização de cartão (página pública, PCI SAQ-A) →
+      `metodos_pagamento` real. Não iniciado.
+- [x] (rascunho, não testado) Cobrança recorrente automática: cron
+      `processar-cobrancas` + `gateway-webhook` + `eventos_gateway`.
+- [x] (rascunho, não testado) Pix por cobrança + mensagem automática.
+      `cobranca_pix` tem gerador completo desde 17/ago/2026 —
+      `processar-cobrancas` grava o lembrete (migration 0007,
+      `lembretes.dados_extra`) e `_shared/templates.ts` monta a mensagem.
+      Falta só o template ser submetido/aprovado na Meta (bloqueado no
+      número/Business Portfolio, ver checklist da Fase 5). `aviso_cobranca`
+      e `cadastro_cartao` continuam sem gerador (checkpoint D-1 de cobrança
+      e tokenização de cartão, respectivamente).
+- [x] (rascunho, não testado) Portal do tutor: agendar avulsa
+      (`app/(public)/agendar/[tutorId]/`). Pagamento ainda NÃO é síncrono
+      nessa tela — ver gap #3 em `docs/fase6_pagamentos.md`.
+- [x] (rascunho, não testado) Dunning: retries D+1/D+4 e pausa automática
+      (`registrar_falha_pagamento`). Lembretes `cobranca_falhou`/
+      `cartao_vencendo` continuam sem gerador de verdade.
+- [x] (rascunho, não testado) Fee da plataforma via Pix — gap: petshop não
+      tem como salvar cartão próprio ainda (ver gap #2 no plano).
+- [x] (rascunho, não testado) Tela `/financeiro` (petshop). Visão de
+      receita no `/admin` não iniciada.
+
+Três gaps descobertos escrevendo o código, documentados em
+`docs/fase6_pagamentos.md` (seção "Status da implementação"): tutor precisa
+de CPF pra existir no gateway, petshop não tem coluna pra cartão próprio, e
+o pagamento do portal do tutor ainda não é síncrono na mesma tela.
 
 O trigger já calcula o valor proporcional e o split
 (`valor_petshop` vs `valor_percentual`) — falta ligar o gateway de verdade.
-É o passo mais delicado tecnicamente.
+É o passo mais delicado tecnicamente; tudo testado no sandbox com dados
+fake antes de encostar num petshop real.
 
 ## Fase 7 — Deploy + piloto com 1 petshop real → beta
 

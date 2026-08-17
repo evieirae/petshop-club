@@ -1,5 +1,6 @@
 "use client";
 
+import { botao } from "@/lib/ui/styles";
 import { useState, useTransition, type FormEvent } from "react";
 import type { ContatoAdicional, Pet, Porte, Tutor } from "@/types/database";
 import { FormField, inputClass } from "@/components/ui/FormField";
@@ -41,6 +42,7 @@ export function CadastroForm({
           porte_id: p.porte_id,
           raca: p.raca,
           observacoes: p.observacoes,
+          sexo: p.sexo,
         }))
       : [
           {
@@ -49,6 +51,7 @@ export function CadastroForm({
             porte_id: portes[0]?.id ?? 0,
             raca: null,
             observacoes: null,
+            sexo: null,
           },
         ]
   );
@@ -69,7 +72,14 @@ export function CadastroForm({
   function adicionarPet() {
     setPets((atual) => [
       ...atual,
-      { chave: novaChave(), nome: "", porte_id: portes[0]?.id ?? 0, raca: null, observacoes: null },
+      {
+        chave: novaChave(),
+        nome: "",
+        porte_id: portes[0]?.id ?? 0,
+        raca: null,
+        observacoes: null,
+        sexo: null,
+      },
     ]);
   }
 
@@ -115,7 +125,7 @@ export function CadastroForm({
 
   if (enviado) {
     return (
-      <div className="rounded-xl border border-confirmado bg-confirmado-bg px-6 py-8 text-center">
+      <div className="rounded-xl border border-success-100 bg-success-50 px-6 py-8 text-center">
         <p className="font-display text-lg text-ink-900">Cadastro enviado!</p>
         <p className="mt-2 text-sm text-ink-700">
           Recebemos seus dados. Pode fechar essa página — o petshop já
@@ -127,7 +137,7 @@ export function CadastroForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="rounded-xl border border-surface-border bg-surface-card p-5">
+      <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
         <h2 className="font-display text-lg text-ink-900">Seus dados</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Nome" htmlFor="cadastro_nome" full>
@@ -159,13 +169,13 @@ export function CadastroForm({
         </div>
       </div>
 
-      <div className="rounded-xl border border-surface-border bg-surface-card p-5">
+      <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-ink-900">Seus pets</h2>
           <button
             type="button"
             onClick={adicionarPet}
-            className="text-xs font-medium text-club-dark hover:underline"
+            className="text-xs font-medium text-brand-700 hover:underline"
           >
             + Adicionar outro pet
           </button>
@@ -208,6 +218,18 @@ export function CadastroForm({
                   onChange={(e) => atualizarPet(pet.chave, "raca", e.target.value)}
                 />
               </FormField>
+              <FormField label="Sexo" htmlFor={`pet_sexo_${pet.chave}`} hint="Opcional.">
+                <select
+                  id={`pet_sexo_${pet.chave}`}
+                  className={inputClass}
+                  value={pet.sexo ?? ""}
+                  onChange={(e) => atualizarPet(pet.chave, "sexo", e.target.value || null)}
+                >
+                  <option value="">Não informado</option>
+                  <option value="macho">Macho</option>
+                  <option value="femea">Fêmea</option>
+                </select>
+              </FormField>
               <FormField
                 label="Observações"
                 htmlFor={`pet_obs_${pet.chave}`}
@@ -225,7 +247,7 @@ export function CadastroForm({
                 <button
                   type="button"
                   onClick={() => removerPet(pet.chave)}
-                  className="text-left text-xs font-medium text-pendente hover:underline sm:col-span-2"
+                  className={botao({ variante: "textoPerigo", tamanho: "sm", className: "justify-start text-left sm:col-span-2" })}
                 >
                   Remover {pet.nome || `pet #${indice + 1}`}
                 </button>
@@ -235,13 +257,13 @@ export function CadastroForm({
         </div>
       </div>
 
-      <div className="rounded-xl border border-surface-border bg-surface-card p-5">
+      <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
         <label className="flex items-start gap-2 text-sm text-ink-700">
           <input
             type="checkbox"
             checked={temContatoBuscaEntrega}
             onChange={(e) => setTemContatoBuscaEntrega(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-surface-border text-club focus:ring-club"
+            className="mt-0.5 h-4 w-4 rounded border-surface-border text-brand-500 focus:ring-brand-500"
           />
           Quem busca/entrega o pet é uma pessoa diferente de mim
         </label>
@@ -269,7 +291,7 @@ export function CadastroForm({
       </div>
 
       {erro && (
-        <p role="alert" className="rounded-lg bg-pendente-bg px-3 py-2 text-sm text-pendente">
+        <p role="alert" className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {erro}
         </p>
       )}
@@ -277,7 +299,7 @@ export function CadastroForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-club px-4 py-2.5 font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+        className={botao({ tamanho: "lg", largura: "cheia" })}
       >
         {pending ? "Enviando…" : "Enviar cadastro"}
       </button>

@@ -1,4 +1,4 @@
-# Clube de Banho e Tosa — painel operacional
+# PetClub — painel operacional
 
 Fundação técnica do painel: Next.js (App Router) + Supabase (auth + banco) +
 Tailwind. As telas de operação de verdade (agenda, tutores, planos,
@@ -74,7 +74,7 @@ criar o repositório remoto (vazio, sem README/gitignore) e apontar pra ele:
 
 **Opção A — GitHub CLI** (se tiver o `gh` instalado e autenticado):
 ```bash
-gh repo create clube-banho-tosa --private --source=. --remote=origin --push
+gh repo create petclub --private --source=. --remote=origin --push
 ```
 
 **Opção B — pelo site do GitHub:**
@@ -82,7 +82,7 @@ gh repo create clube-banho-tosa --private --source=. --remote=origin --push
    README, .gitignore ou licença — pra não conflitar com o histórico local).
 2. Depois:
    ```bash
-   git remote add origin git@github.com:SEU_USUARIO/clube-banho-tosa.git
+   git remote add origin git@github.com:SEU_USUARIO/petclub.git
    git branch -M main
    git push -u origin main
    ```

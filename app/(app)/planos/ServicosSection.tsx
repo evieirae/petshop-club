@@ -1,5 +1,7 @@
 "use client";
 
+import { botao } from "@/lib/ui/styles";
+import { Badge } from "@/components/ui/Badge";
 import { useState, useTransition, type FormEvent } from "react";
 import type { CategoriaServico, Porte, PrecoServico, Servico } from "@/types/database";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -16,15 +18,9 @@ function nomeExibicao(servico: Servico, categoria?: CategoriaServico) {
 }
 
 function AtivoBadge({ ativo }: { ativo: boolean }) {
-  return (
-    <span
-      className={`rounded-stamp px-2 py-0.5 text-xs font-medium ${
-        ativo ? "bg-confirmado-bg text-confirmado" : "bg-pendente-bg text-pendente"
-      }`}
-    >
-      {ativo ? "Ativo" : "Inativo"}
-    </span>
-  );
+  // Inativo é neutro, não vermelho: desligar um serviço é uma escolha do
+  // petshop, e o vermelho fica reservado pra coisa que deu errado de verdade.
+  return <Badge tom={ativo ? "sucesso" : "neutro"}>{ativo ? "Ativo" : "Inativo"}</Badge>;
 }
 
 export function ServicosSection({
@@ -55,7 +51,7 @@ export function ServicosSection({
         <button
           type="button"
           onClick={() => setCriando((v) => !v)}
-          className="rounded-lg border border-club px-4 py-2 text-sm font-medium text-club-dark transition hover:bg-club-light"
+          className={botao({ variante: criando ? "neutra" : "cta" })}
         >
           {criando ? "Cancelar" : "+ Novo serviço"}
         </button>
@@ -126,7 +122,7 @@ function NovoServicoForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 rounded-xl border border-dashed border-club bg-club-light/30 p-5 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:grid-cols-2"
     >
       <FormField label="Categoria" htmlFor="nova_categoria">
         <select
@@ -160,7 +156,7 @@ function NovoServicoForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao()}
         >
           {pending ? "Adicionando…" : "Adicionar serviço"}
         </button>
@@ -168,7 +164,7 @@ function NovoServicoForm({
           Depois de criar, edite pra definir o preço por porte.
         </p>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}
@@ -231,7 +227,7 @@ function ServicoCard({
         <button
           type="button"
           onClick={() => setEditando(true)}
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+          className={botao({ variante: "neutra", tamanho: "sm" })}
         >
           Editar
         </button>
@@ -254,7 +250,7 @@ function AtivoToggleButton({
       type="button"
       disabled={pending}
       onClick={() => startTransition(async () => { await onToggle(!ativo); })}
-      className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark disabled:opacity-60"
+      className={botao({ variante: "neutra", tamanho: "sm" })}
     >
       {ativo ? "Desativar" : "Ativar"}
     </button>
@@ -324,7 +320,7 @@ function ServicoEditForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 rounded-xl border border-club bg-surface-card p-5 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:grid-cols-2"
     >
       <FormField label="Categoria" htmlFor={`categoria_${servico.id}`}>
         <select
@@ -387,7 +383,7 @@ function ServicoEditForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao()}
         >
           {pending ? "Salvando…" : "Salvar"}
         </button>
@@ -399,7 +395,7 @@ function ServicoEditForm({
           Cancelar
         </button>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}

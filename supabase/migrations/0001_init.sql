@@ -1,5 +1,5 @@
 -- ============================================================================
--- Clube de Assinatura de Banho e Tosa — schema inicial (Supabase / Postgres)
+-- PetClub — schema inicial (Supabase / Postgres)
 -- Modelo: SaaS por petshop (multi-tenant), cada petshop gerencia sua carteira.
 -- ============================================================================
 

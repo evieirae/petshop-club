@@ -1,5 +1,6 @@
 "use client";
 
+import { alerta, botao } from "@/lib/ui/styles";
 import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import type { Petshop } from "@/types/database";
@@ -307,7 +308,7 @@ export function ConfiguracoesForm({
         descricao="Mensalidade da plataforma e o corte sobre cada cobrança de tosa — definidos pela administração da plataforma, aqui é só consulta."
       >
         <div className="sm:col-span-2">
-          <div className="grid grid-cols-1 gap-4 rounded-lg border border-dashed border-surface-border bg-surface px-4 py-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 rounded-lg border border-surface-border bg-surface-muted px-4 py-3 sm:grid-cols-3">
             <div>
               <p className="text-xs text-ink-500">Fee fixo mensal</p>
               <p className="mt-0.5 font-medium text-ink-900">
@@ -332,7 +333,7 @@ export function ConfiguracoesForm({
               <>
                 Você é admin da plataforma — edite esses valores (deste ou de
                 qualquer outro petshop) em{" "}
-                <Link href="/admin" className="font-medium text-club-dark hover:underline">
+                <Link href="/admin" className="font-medium text-brand-700 hover:underline">
                   Administração
                 </Link>
                 .
@@ -362,7 +363,7 @@ export function ConfiguracoesForm({
               reposição — é o que já está implementado de ponta a ponta.
             </p>
           ) : (
-            <p className="mt-3 rounded-lg bg-pendente-bg px-3 py-2 text-xs text-pendente">
+            <p className={alerta("atencao", "mt-3 text-xs")}>
               Ainda não implementado de ponta a ponta: a coluna salva como
               &quot;não&quot;, mas a lógica de gerar uma visita de reposição
               sem cobrar de novo ainda não existe no banco (ver seção 5 de
@@ -377,15 +378,15 @@ export function ConfiguracoesForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-5 py-2.5 font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao({ tamanho: "lg" })}
         >
           {pending ? "Salvando…" : "Salvar alterações"}
         </button>
         {status === "sucesso" && (
-          <p className="text-sm text-confirmado">Salvo.</p>
+          <p className="text-sm text-success-700">Salvo.</p>
         )}
         {status === "erro" && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {mensagemErro}
           </p>
         )}

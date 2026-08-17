@@ -1,0 +1,4 @@
+# Codigo Deno (Supabase Edge Functions) — roda fora do Next.js, com import
+# de URL (https://esm.sh/...) e globals (Deno.*) que o eslint/tsc do
+# projeto nao reconhecem. Ver supabase/functions/enviar-lembretes.
+supabase/functions/

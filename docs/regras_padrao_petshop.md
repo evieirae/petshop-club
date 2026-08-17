@@ -46,14 +46,50 @@ qualquer decisão de negócio nova — tipo a de falta que originou este arquivo
 > próprio ritmo — uns respondem mensagem de manhã cedo, outros só à noite.
 > Não há um "certo" universal.
 
+**Como a confirmação chega** (Fase 5, WhatsApp Cloud API da Meta) — três
+caminhos, todos terminando no mesmo lugar (`agendamentos.status =
+'confirmado'`, que o trigger carimba em `confirmado_em`):
+
+1. O tutor toca no botão da mensagem e cai na rota pública
+   `/confirmar/[lembreteId]`.
+2. O tutor responde **"sim"** na própria conversa — o webhook
+   (`supabase/functions/whatsapp-webhook`) casa a resposta com o lembrete de
+   confirmação mais recente daquele telefone e chama
+   `confirmar_agendamento_por_whatsapp()`.
+3. A equipe confirma na tela de Agenda, quando o cliente avisou por outro
+   meio.
+
+Resposta que não seja um "sim" seco (ex.: *"sim, mas dá pra ser 15h?"*) é
+ignorada de propósito pelo caminho 2 — vira escalonamento normal pro
+petshop, e alguém lê a mensagem. Confirmar um horário que o cliente está
+justamente questionando seria pior do que não confirmar nada.
+
+As mensagens saem por **templates aprovados na Meta** (obrigatório pra
+mensagem que a gente inicia) — texto, parâmetros e regras de aprovação em
+`docs/whatsapp_templates_meta.md`.
+
 ## 3. Cobrança e repasse (split de pagamento)
 
 | Variável | Coluna (`petshops`) | Tipo | Padrão | O que controla |
 |---|---|---|---|---|
 | Fee fixo mensal | `fee_fixo_mensal` | numeric | R$ 99,00 | Mensalidade da plataforma cobrada do petshop (`mensalidades_petshop`), independente do nº de visitas. |
-| Percentual da plataforma | `percentual_plataforma` | numeric | 0,03 (3%) | Corte sobre cada cobrança de tosa que passa pela plataforma. |
+| Percentual da plataforma | `percentual_plataforma` | numeric | 0,03 (3%) | Receita da plataforma sobre cada cobrança de tosa — ver mudança de modelo abaixo. |
 | Isento até | `isento_fee_ate` | date | *nulo* | Data até a qual o fee fixo sai zerado — usado pro período de teste do piloto. |
 | Falta consome visita paga | `falta_consome_visita_paga` | boolean | **true** | Ver seção 5 — política de negócio, não só um valor. |
+
+> **Mudança de modelo na Fase 6** (`docs/fase6_pagamentos.md`, decisão de
+> 16/ago/2026): até a Fase 4, `percentual_plataforma` era descrito como um
+> **corte** — o petshop recebia `valor_total − percentual` (97% de R$99).
+> Isso mudou: com gateway de pagamento real, a taxa de transação do
+> próprio gateway (Asaas) reduziria a margem de um jeito imprevisível se
+> continuasse saindo do que o petshop recebe (ver "unit economics" no
+> plano). A partir da Fase 6, **o petshop recebe 100% do valor do
+> serviço/plano**, e `percentual_plataforma` + a taxa do gateway daquele
+> meio de pagamento (Pix = R$0, cartão = variável) formam uma **taxa de
+> serviço somada por cima**, cobrada do tutor, exibida separada do preço
+> do serviço ("Banho R$99,00 + taxa de serviço R$X,XX = Total R$Y,YY").
+> Pix continua sendo o meio mais barato pro tutor, porque só carrega a
+> parte da plataforma, nunca a do gateway.
 
 > **Quem edita isso**: só a administração da plataforma (`usuarios_petshop.eh_admin_plataforma = true`),
 > pela tela `/admin` — nunca o petshop parceiro. É a receita da plataforma,
@@ -199,11 +235,15 @@ assinar". Ver `supabase/migrations/0003_fase4_assinaturas_agenda.sql`.
 - Visita avulsa **não gera a próxima sozinha** — cada uma é agendada na mão,
   uma de cada vez. `trg_agendamento_resolvido` só chama
   `gerar_proximo_agendamento` quando `assinatura_id is not null`.
-- **Pendência pra Fase 5** (lembretes via WhatsApp): `resolver_contato()`
+- **Resolvido na Fase 5** (lembretes via WhatsApp): `resolver_contato()`
   precisa de um `tutor_id` pra achar o contato certo. Pra visita de
   assinatura, esse `tutor_id` vem de `agendamentos.assinatura_id ->
   assinaturas.tutor_id`; pra avulsa, vem direto de `agendamentos.tutor_id`.
-  Quem for implementar o envio de fato precisa ramificar por ali.
+  Essa ramificação está implementada em `gerar_lembretes_confirmacao()` e
+  em `trg_pet_pronto_lembrete()`
+  (`supabase/migrations/0005_fase5_lembretes_whatsapp.sql`), e o telefone
+  resolvido fica gravado em `lembretes.telefone_destino` como snapshot —
+  mudança de cadastro depois não reescreve pra quem a mensagem foi mandada.
 - "Cliente com cadastro mas sem NENHUM agendamento ainda" (nem assinatura,
   nem avulsa) não virou tabela nova — é só um filtro na tela de Agenda
   (tutor sem assinatura e sem agendamento avulso), útil pra equipe saber

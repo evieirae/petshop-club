@@ -1,5 +1,8 @@
 "use client";
 
+import { botao } from "@/lib/ui/styles";
+import { Badge } from "@/components/ui/Badge";
+import { tomCores, type TomBadge } from "@/lib/ui/styles";
 import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import type {
@@ -63,22 +66,20 @@ const LABEL_STATUS: Record<StatusAgendamento, string> = {
   cancelado: "Cancelado",
 };
 
-const ESTILO_STATUS: Record<StatusAgendamento, string> = {
-  agendado: "bg-surface text-ink-700 border border-surface-border",
-  confirmado: "bg-confirmado-bg text-confirmado",
-  pronto: "bg-club-light text-club-dark",
-  entregue: "bg-confirmado-bg text-confirmado",
-  faltou: "bg-pendente-bg text-pendente",
-  reagendado: "bg-club-light text-club-dark",
-  cancelado: "bg-surface text-ink-500",
+// Os tons saem de lib/ui/styles.ts — o mesmo verde de "confirmado" aqui e de
+// "pago" no financeiro. Amarelo = precisa de uma ação do balcão.
+const TOM_STATUS: Record<StatusAgendamento, TomBadge> = {
+  agendado: "neutro",
+  confirmado: "sucesso",
+  pronto: "info",
+  entregue: "sucesso",
+  faltou: "erro",
+  reagendado: "atencao",
+  cancelado: "neutro",
 };
 
 function StatusBadge({ status }: { status: StatusAgendamento }) {
-  return (
-    <span className={`rounded-stamp px-2 py-0.5 text-xs font-medium ${ESTILO_STATUS[status]}`}>
-      {LABEL_STATUS[status]}
-    </span>
-  );
+  return <Badge tom={TOM_STATUS[status]}>{LABEL_STATUS[status]}</Badge>;
 }
 
 function nomeServico(servico: Servico | undefined, categorias: CategoriaServico[]) {
@@ -152,6 +153,7 @@ export function AgendaSection({
   planos,
   assinaturas,
   tutoresSemAgendamento,
+  pendenciasConfirmacao,
 }: {
   petshopId: string;
   expediente: ExpedientePetshop;
@@ -165,6 +167,7 @@ export function AgendaSection({
   planos: Plano[];
   assinaturas: Assinatura[];
   tutoresSemAgendamento: Tutor[];
+  pendenciasConfirmacao: Agendamento[];
 }) {
   const [formularioAvulsa, setFormularioAvulsa] = useState<FormularioAvulsaInfo | null>(null);
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
@@ -213,19 +216,19 @@ export function AgendaSection({
           <div className="flex items-center gap-2">
             <Link
               href={`/agenda?data=${adicionarDias(inicioSemana, -7)}`}
-              className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+              className={botao({ variante: "neutra", tamanho: "sm" })}
             >
               ‹ Semana anterior
             </Link>
             <Link
               href="/agenda"
-              className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+              className={botao({ variante: "neutra", tamanho: "sm" })}
             >
               Hoje
             </Link>
             <Link
               href={`/agenda?data=${adicionarDias(inicioSemana, 7)}`}
-              className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+              className={botao({ variante: "neutra", tamanho: "sm" })}
             >
               Semana seguinte ›
             </Link>
@@ -234,7 +237,9 @@ export function AgendaSection({
               onClick={() =>
                 setFormularioAvulsa((atual) => (atual ? null : { data: diaSelecionado }))
               }
-              className="rounded-lg border border-club px-4 py-2 text-sm font-medium text-club-dark transition hover:bg-club-light"
+              // Amarelo Ocre: a ação principal da tela. Vira "neutra" quando o
+              // formulário está aberto, porque aí o botão só cancela.
+              className={botao({ variante: formularioAvulsa ? "neutra" : "cta" })}
             >
               {formularioAvulsa ? "Cancelar" : "+ Agendar visita avulsa"}
             </button>
@@ -260,12 +265,12 @@ export function AgendaSection({
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr>
-                <th className="w-16 border-b border-r border-surface-border bg-surface p-2" />
+                <th className="w-16 border-b border-r border-surface-border bg-surface-muted p-2" />
                 {dias.map((dia) => (
                   <th
                     key={dia}
                     className={`border-b border-surface-border p-2 text-center font-medium ${
-                      dia === hoje ? "bg-club-light/40" : "bg-surface"
+                      dia === hoje ? "bg-brand-50/60" : "bg-surface-card"
                     }`}
                   >
                     <div className="text-xs font-normal text-ink-500">{nomeDiaSemana(dia)}</div>
@@ -293,7 +298,7 @@ export function AgendaSection({
                         <td
                           key={dia}
                           className={`border-b border-surface-border p-1 align-top ${
-                            dia === hoje ? "bg-club-light/10" : ""
+                            dia === hoje ? "bg-brand-50/40" : ""
                           }`}
                         >
                           <div className="flex flex-col gap-1">
@@ -307,10 +312,10 @@ export function AgendaSection({
                                   )
                                 }
                                 className={`truncate rounded px-1.5 py-1 text-left text-xs transition ${
-                                  ESTILO_STATUS[r.agendamento.status]
+                                  tomCores[TOM_STATUS[r.agendamento.status]]
                                 } ${
                                   selecionadoId === r.agendamento.id
-                                    ? "ring-2 ring-club ring-offset-1"
+                                    ? "ring-2 ring-brand-500 ring-offset-1"
                                     : ""
                                 }`}
                                 title={`${r.pet?.nome ?? "Pet removido"} · ${r.tutor?.nome ?? "Tutor removido"}`}
@@ -321,7 +326,7 @@ export function AgendaSection({
                             <button
                               type="button"
                               onClick={() => setFormularioAvulsa({ data: dia, horario })}
-                              className="text-left text-[11px] text-ink-500 hover:text-club-dark"
+                              className="text-left text-[11px] text-ink-500 hover:text-brand-700"
                             >
                               + novo
                             </button>
@@ -352,6 +357,39 @@ export function AgendaSection({
         </div>
       </section>
 
+      {pendenciasConfirmacao.length > 0 && (
+        <section>
+          <h2 className="font-display text-lg text-ink-900">Confirmações pendentes</h2>
+          <p className="mt-1 text-sm text-ink-500">
+            Visitas de amanhã que passaram do prazo de confirmação do tutor
+            (Fase 5 — lembrete de escalonamento já foi mandado por WhatsApp
+            pro petshop também) — vale confirmar direto com o cliente.
+          </p>
+          <div className="mt-3 space-y-2">
+            {pendenciasConfirmacao.map((agendamento) => {
+              const resolvido = resolverAgendamento(agendamento, ctx);
+              return (
+                <Link
+                  key={agendamento.id}
+                  href={`/agenda?data=${dataLocalDoISO(agendamento.data_hora)}`}
+                  className="flex items-center justify-between rounded-lg border border-danger-100 bg-danger-50 px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-ink-900">
+                      {resolvido.pet?.nome ?? "Pet"} · {resolvido.tutor?.nome ?? "Tutor"}
+                    </p>
+                    <p className="text-xs text-ink-500">
+                      {dataLocalDoISO(agendamento.data_hora)} às {horarioLocal(agendamento.data_hora)}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-danger-600">Ver na agenda</span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {tutoresSemAgendamento.length > 0 && (
         <section>
           <h2 className="font-display text-lg text-ink-900">Sem agendamento ainda</h2>
@@ -372,7 +410,7 @@ export function AgendaSection({
                 <button
                   type="button"
                   onClick={() => setFormularioAvulsa({ data: diaSelecionado, tutorId: tutor.id })}
-                  className="text-xs font-medium text-club-dark hover:underline"
+                  className="text-xs font-medium text-brand-700 hover:underline"
                 >
                   Agendar visita avulsa
                 </button>
@@ -410,7 +448,7 @@ function AgendamentoCard({
   const terminal = TERMINAIS.includes(agendamento.status);
 
   return (
-    <div className="rounded-xl border border-club bg-surface-card p-4">
+    <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -419,7 +457,7 @@ function AgendamentoCard({
             </span>
             <StatusBadge status={agendamento.status} />
             {origem === "avulsa" && (
-              <span className="rounded-stamp border border-dashed border-club px-2 py-0.5 text-xs text-club-dark">
+              <span className="rounded-pill border border-brand-200 px-2 py-0.5 text-xs text-brand-700">
                 avulso
               </span>
             )}
@@ -472,7 +510,7 @@ function AgendamentoCard({
         </div>
       </div>
 
-      {erro && <p className="mt-2 text-xs text-pendente">{erro}</p>}
+      {erro && <p className="mt-2 text-xs text-danger-600">{erro}</p>}
 
       {reagendando && (
         <div className="mt-3 border-t border-surface-border pt-3">
@@ -502,10 +540,10 @@ function AcaoBotao({
   children: React.ReactNode;
 }) {
   const estilo = destaque
-    ? "bg-club text-white hover:bg-club-dark"
+    ? "bg-brand-500 text-white hover:bg-brand-700"
     : atencao
-      ? "border border-surface-border text-pendente hover:border-pendente"
-      : "border border-surface-border text-ink-700 hover:border-club hover:text-club-dark";
+      ? "border border-surface-border text-danger-600 hover:border-danger-100"
+      : "border border-surface-border text-ink-700 hover:border-brand-500 hover:text-brand-700";
 
   return (
     <button
@@ -591,11 +629,11 @@ function ReagendarForm({
       <button
         type="submit"
         disabled={pending || horarios.length === 0}
-        className="rounded-lg bg-club px-3 py-1.5 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+        className={botao({ tamanho: "sm" })}
       >
         {pending ? "Salvando…" : "Confirmar novo horário"}
       </button>
-      {erro && <p className="text-sm text-pendente">{erro}</p>}
+      {erro && <p className="text-sm text-danger-600">{erro}</p>}
     </form>
   );
 }
@@ -620,9 +658,34 @@ function AvulsaForm({
   onDone: () => void;
 }) {
   const horarios = gerarHorariosDisponiveis(expediente);
-  const [tutorId, setTutorId] = useState(info.tutorId ?? tutores[0]?.id ?? "");
-  const petsDoTutor = pets.filter((p) => p.tutor_id === tutorId);
-  const [petId, setPetId] = useState(petsDoTutor[0]?.id ?? "");
+
+  // Busca por pet primeiro (não por tutor) — se dois pets tiverem o mesmo
+  // nome, o nome do tutor entra só como desambiguador na label da opção.
+  // Ver pedido original: agendar pelo pet, tutor vem junto automaticamente.
+  const petsOrdenados = [...pets].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const contagemNomes = new Map<string, number>();
+  for (const p of pets) {
+    const chave = p.nome.trim().toLowerCase();
+    contagemNomes.set(chave, (contagemNomes.get(chave) ?? 0) + 1);
+  }
+  function nomeTutor(tutorId: string): string {
+    return tutores.find((t) => t.id === tutorId)?.nome ?? "tutor não identificado";
+  }
+  function labelPet(p: Pet): string {
+    const duplicado = (contagemNomes.get(p.nome.trim().toLowerCase()) ?? 0) > 1;
+    return duplicado ? `${p.nome} (${nomeTutor(p.tutor_id)})` : p.nome;
+  }
+
+  // Se veio um tutorId pré-selecionado (ex.: atalho "Sem agendamento
+  // ainda"), abre já no primeiro pet desse tutor; senão, primeiro pet da
+  // lista ordenada.
+  const petInicial = info.tutorId
+    ? pets.find((p) => p.tutor_id === info.tutorId)?.id
+    : undefined;
+  const [petId, setPetId] = useState(petInicial ?? petsOrdenados[0]?.id ?? "");
+  const petSelecionado = pets.find((p) => p.id === petId);
+  const tutorId = petSelecionado?.tutor_id ?? "";
+
   const [servicoId, setServicoId] = useState(servicos[0]?.id ?? "");
   const [data, setData] = useState(info.data);
   const [horario, setHorario] = useState(
@@ -631,18 +694,12 @@ function AvulsaForm({
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
 
-  function handleTutorChange(novoTutorId: string) {
-    setTutorId(novoTutorId);
-    const primeiroPet = pets.find((p) => p.tutor_id === novoTutorId);
-    setPetId(primeiroPet?.id ?? "");
-  }
-
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setErro("");
 
-    if (!tutorId || !petId || !servicoId) {
-      setErro("Escolha tutor, pet e serviço.");
+    if (!petId || !tutorId || !servicoId) {
+      setErro("Escolha pet e serviço.");
       return;
     }
     if (!horario) {
@@ -665,10 +722,10 @@ function AvulsaForm({
     });
   }
 
-  if (tutores.length === 0) {
+  if (pets.length === 0) {
     return (
-      <p className="text-sm text-pendente">
-        Cadastre um tutor em Tutores &amp; Pets antes de agendar uma visita avulsa.
+      <p className="text-sm text-danger-600">
+        Cadastre um tutor e um pet em Tutores &amp; Pets antes de agendar uma visita avulsa.
       </p>
     );
   }
@@ -676,40 +733,29 @@ function AvulsaForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 rounded-xl border border-dashed border-club bg-club-light/30 p-5 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:grid-cols-2"
     >
-      <FormField label="Tutor" htmlFor="avulsa_tutor">
-        <select
-          id="avulsa_tutor"
-          className={inputClass}
-          value={tutorId}
-          onChange={(e) => handleTutorChange(e.target.value)}
-        >
-          {tutores.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.nome}
-            </option>
-          ))}
-        </select>
-      </FormField>
-      <FormField
-        label="Pet"
-        htmlFor="avulsa_pet"
-        hint={petsDoTutor.length === 0 ? "Esse tutor ainda não tem pet cadastrado." : undefined}
-      >
+      <FormField label="Pet" htmlFor="avulsa_pet">
         <select
           id="avulsa_pet"
           className={inputClass}
           value={petId}
           onChange={(e) => setPetId(e.target.value)}
-          disabled={petsDoTutor.length === 0}
         >
-          {petsDoTutor.map((p) => (
+          {petsOrdenados.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.nome}
+              {labelPet(p)}
             </option>
           ))}
         </select>
+      </FormField>
+      <FormField label="Tutor" htmlFor="avulsa_tutor_nome" hint="Preenchido automaticamente pelo pet escolhido.">
+        <input
+          id="avulsa_tutor_nome"
+          className={inputClass}
+          value={tutorId ? nomeTutor(tutorId) : ""}
+          disabled
+        />
       </FormField>
       <FormField label="Serviço" htmlFor="avulsa_servico">
         <select
@@ -757,8 +803,8 @@ function AvulsaForm({
       <div className="flex items-center gap-3 sm:col-span-2">
         <button
           type="submit"
-          disabled={pending || petsDoTutor.length === 0 || horarios.length === 0}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          disabled={pending || !petId || horarios.length === 0}
+          className={botao()}
         >
           {pending ? "Agendando…" : "Agendar visita avulsa"}
         </button>
@@ -766,7 +812,7 @@ function AvulsaForm({
           O preço é puxado de Planos &amp; Serviços pelo porte do pet.
         </p>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}

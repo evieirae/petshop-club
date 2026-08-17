@@ -1,5 +1,6 @@
 "use client";
 
+import { botao } from "@/lib/ui/styles";
 import { useState, useTransition, type FormEvent } from "react";
 import type { Petshop } from "@/types/database";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -53,7 +54,7 @@ function PetshopTaxasCard({ petshop }: { petshop: Petshop }) {
             <>
               {" "}
               ·{" "}
-              <span className={isento ? "text-confirmado" : undefined}>
+              <span className={isento ? "text-success-700" : undefined}>
                 isento até {petshop.isento_fee_ate}
               </span>
             </>
@@ -63,7 +64,7 @@ function PetshopTaxasCard({ petshop }: { petshop: Petshop }) {
       <button
         type="button"
         onClick={() => setEditando(true)}
-        className="rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-club hover:text-club-dark"
+        className={botao({ variante: "neutra", tamanho: "sm" })}
       >
         Editar taxas
       </button>
@@ -119,7 +120,7 @@ function PetshopTaxasEditForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 rounded-xl border border-club bg-surface-card p-5 sm:grid-cols-3"
+      className="grid grid-cols-1 gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:grid-cols-3"
     >
       <p className="text-sm font-medium text-ink-900 sm:col-span-3">{petshop.nome}</p>
 
@@ -174,7 +175,7 @@ function PetshopTaxasEditForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-club px-4 py-2 text-sm font-medium text-white transition hover:bg-club-dark disabled:opacity-60"
+          className={botao()}
         >
           {pending ? "Salvando…" : "Salvar"}
         </button>
@@ -186,7 +187,7 @@ function PetshopTaxasEditForm({
           Cancelar
         </button>
         {erro && (
-          <p role="alert" className="text-sm text-pendente">
+          <p role="alert" className="text-sm text-danger-600">
             {erro}
           </p>
         )}

@@ -57,6 +57,7 @@ export default async function AgendaPage({
     { data: planos },
     { data: assinaturas },
     { data: agendamentosAvulsosTodos },
+    { data: lembretesEscalados },
   ] = await Promise.all([
     supabase
       .from("agendamentos")
@@ -72,6 +73,14 @@ export default async function AgendaPage({
     supabase.from("planos").select("*").eq("petshop_id", petshopId),
     supabase.from("assinaturas").select("*").eq("petshop_id", petshopId),
     supabase.from("agendamentos").select("tutor_id").eq("petshop_id", petshopId).is("assinatura_id", null),
+    // Fase 5: RLS ja restringe isso ao petshop logado via join em
+    // agendamentos (ver policy "isolamento_petshop" em
+    // supabase/migrations/0005_fase5_lembretes_whatsapp.sql).
+    supabase
+      .from("lembretes")
+      .select("agendamento_id")
+      .eq("tipo", "confirmacao_manual_petshop")
+      .not("agendamento_id", "is", null),
   ]);
 
   const tutorIdsComAssinatura = new Set((assinaturas ?? []).map((a) => a.tutor_id));
@@ -81,6 +90,25 @@ export default async function AgendaPage({
   const tutoresSemAgendamento = (tutores as Tutor[] | null ?? []).filter(
     (t) => !tutorIdsComAssinatura.has(t.id) && !tutorIdsComAvulso.has(t.id)
   );
+
+  // Confirmações escaladas pro petshop (Fase 5) que ainda não foram
+  // resolvidas — filtra por status em vez de lembretes.confirmado_em
+  // porque a equipe pode resolver clicando "Confirmar"/"Pronto"/"Entregue"
+  // direto na Agenda, sem passar pela linha de lembrete de escalonamento.
+  const agendamentoIdsEscalados = (lembretesEscalados ?? [])
+    .map((l) => l.agendamento_id)
+    .filter((id): id is string => !!id);
+
+  let pendenciasConfirmacao: Agendamento[] = [];
+  if (agendamentoIdsEscalados.length > 0) {
+    const { data } = await supabase
+      .from("agendamentos")
+      .select("*")
+      .in("id", agendamentoIdsEscalados)
+      .in("status", ["agendado", "reagendado"])
+      .order("data_hora");
+    pendenciasConfirmacao = (data as Agendamento[] | null) ?? [];
+  }
 
   return (
     <div>
@@ -103,6 +131,7 @@ export default async function AgendaPage({
           planos={(planos as Plano[]) ?? []}
           assinaturas={(assinaturas as Assinatura[]) ?? []}
           tutoresSemAgendamento={tutoresSemAgendamento}
+          pendenciasConfirmacao={pendenciasConfirmacao}
         />
       </div>
     </div>

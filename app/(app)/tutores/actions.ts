@@ -97,11 +97,25 @@ export async function atualizarTutor(
 
 // Cria o registro em `lembretes` (tipo='cadastro') que documenta o convite
 // enviado — mesmo padrao usado pro lembrete de confirmacao D-1 (ver secao 8
-// do schema). O ENVIO de fato via WhatsApp é Fase 5 do roadmap; por enquanto
-// isso so guarda o "pedido pendente" pro histórico e a UI mostra o link pra
-// equipe copiar/mandar na mao.
+// do schema). A Edge Function de envio (Fase 5, supabase/functions/enviar-lembretes)
+// e quem manda a mensagem de fato, pelo template `cadastro_tutor` aprovado na
+// Meta (docs/whatsapp_templates_meta.md) — aqui so registra o "pedido
+// pendente" com o telefone/nome atuais do tutor. A UI continua mostrando o
+// link pra equipe copiar, como atalho pros casos em que o envio automatico
+// falha (numero errado, template reprovado).
 export async function gerarLinkCadastro(tutorId: string): Promise<ActionResult> {
   const supabase = createClient();
+
+  const { data: tutor, error: erroTutor } = await supabase
+    .from("tutores")
+    .select("nome, telefone")
+    .eq("id", tutorId)
+    .single();
+
+  if (erroTutor || !tutor) {
+    console.error("Erro ao buscar tutor pro lembrete de cadastro:", erroTutor);
+    return { ok: false, erro: ERRO_GENERICO };
+  }
 
   const { error } = await supabase.from("lembretes").insert({
     tutor_id: tutorId,
@@ -109,6 +123,8 @@ export async function gerarLinkCadastro(tutorId: string): Promise<ActionResult> 
     destinatario: "tutor",
     canal: "whatsapp",
     status: "pendente",
+    telefone_destino: tutor.telefone,
+    nome_destino: tutor.nome,
   });
 
   if (error) {
@@ -129,6 +145,9 @@ export type PetInput = {
   porte_id: number;
   raca: string | null;
   observacoes: string | null;
+  // Migration 0008 — usado pra concordância de gênero nas mensagens
+  // automáticas (ex.: pet_pronto). Null = não informado.
+  sexo: "macho" | "femea" | null;
 };
 
 export async function criarPet(
@@ -145,6 +164,7 @@ export async function criarPet(
     porte_id: dados.porte_id,
     raca: dados.raca?.trim() || null,
     observacoes: dados.observacoes?.trim() || null,
+    sexo: dados.sexo,
   });
 
   if (error) {
@@ -166,6 +186,7 @@ export async function atualizarPet(petId: string, dados: PetInput): Promise<Acti
       porte_id: dados.porte_id,
       raca: dados.raca?.trim() || null,
       observacoes: dados.observacoes?.trim() || null,
+      sexo: dados.sexo,
     }, { count: "exact" })
     .eq("id", petId);
 
