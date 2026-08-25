@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { PapelContato } from "@/types/database";
+import type { FormaPagamento, PapelContato } from "@/types/database";
 
 // Estados de agendamento que ainda não chegaram a um resultado final — são os
 // que "pausar"/"cancelar" assinatura precisam resolver pra não deixar visita
@@ -52,6 +52,10 @@ export async function criarTutor(
   }
 
   revalidatePath("/tutores");
+  // /pets (Fase 4) também lista tutores (cada card de pet mostra nome/telefone
+  // do tutor) e cria tutor pelo fluxo "+ Novo Pet" — sem isso, o tutor recém
+  // criado só aparecia depois de um refresh manual da página.
+  revalidatePath("/pets");
   return { ok: true, id: data.id as string };
 }
 
@@ -61,6 +65,11 @@ export type TutorInput = {
   email: string | null;
   endereco: string | null;
   cadastro_completo: boolean;
+  // Migration 0011 — preferência usada pelo trigger de cobrança pra já
+  // nascer a cobrança marcada (cartão/Pix pelo Asaas, ou 'local' — sem
+  // gateway, sem taxa somada ao tutor). O balcão ainda pode trocar por
+  // cobrança individual em Financeiro, sem precisar mudar essa preferência.
+  forma_pagamento_preferida: FormaPagamento;
 };
 
 // Edicao manual pela equipe — cobre o caso do tutor que preenche tudo no
@@ -82,6 +91,7 @@ export async function atualizarTutor(
       email: dados.email?.trim() || null,
       endereco: dados.endereco?.trim() || null,
       cadastro_completo: dados.cadastro_completo,
+      forma_pagamento_preferida: dados.forma_pagamento_preferida,
     }, { count: "exact" })
     .eq("id", tutorId);
 
@@ -92,6 +102,7 @@ export async function atualizarTutor(
   if (!count) return { ok: false, erro: ERRO_PERMISSAO };
 
   revalidatePath("/tutores");
+  revalidatePath("/pets");
   return { ok: true };
 }
 
@@ -136,6 +147,29 @@ export async function gerarLinkCadastro(tutorId: string): Promise<ActionResult> 
   return { ok: true };
 }
 
+// Migration 0019 — soft-delete. Substitui a ideia de "excluir tutor" (que
+// nunca existiu antes) por desativar/reativar, mesmo padrão de
+// alternarAtivoFuncionario/alternarAtivoProduto. Some das listas/pickers
+// padrão sem apagar histórico de agendamentos/vendas/cobranças.
+export async function alternarAtivoTutor(tutorId: string, ativo: boolean): Promise<ActionResult> {
+  const supabase = createClient();
+
+  const { error, count } = await supabase
+    .from("tutores")
+    .update({ ativo }, { count: "exact" })
+    .eq("id", tutorId);
+
+  if (error) {
+    console.error("Erro ao alternar tutor ativo/inativo:", error);
+    return { ok: false, erro: ERRO_GENERICO };
+  }
+  if (!count) return { ok: false, erro: ERRO_PERMISSAO };
+
+  revalidatePath("/tutores");
+  revalidatePath("/pets");
+  return { ok: true };
+}
+
 // ----------------------------------------------------------------------------
 // Pets
 // ----------------------------------------------------------------------------
@@ -148,6 +182,10 @@ export type PetInput = {
   // Migration 0008 — usado pra concordância de gênero nas mensagens
   // automáticas (ex.: pet_pronto). Null = não informado.
   sexo: "macho" | "femea" | null;
+  // Migration 0010 — decide se a tela mostra a lista de raças mais comuns
+  // (cachorro/gato) ou texto livre direto (outro/null). Não restringe o que
+  // pode ser salvo em `raca` — é só sugestão de preenchimento.
+  especie: "cachorro" | "gato" | "outro" | null;
 };
 
 export async function criarPet(
@@ -165,6 +203,7 @@ export async function criarPet(
     raca: dados.raca?.trim() || null,
     observacoes: dados.observacoes?.trim() || null,
     sexo: dados.sexo,
+    especie: dados.especie,
   });
 
   if (error) {
@@ -173,6 +212,7 @@ export async function criarPet(
   }
 
   revalidatePath("/tutores");
+  revalidatePath("/pets");
   return { ok: true };
 }
 
@@ -187,6 +227,7 @@ export async function atualizarPet(petId: string, dados: PetInput): Promise<Acti
       raca: dados.raca?.trim() || null,
       observacoes: dados.observacoes?.trim() || null,
       sexo: dados.sexo,
+      especie: dados.especie,
     }, { count: "exact" })
     .eq("id", petId);
 
@@ -197,29 +238,85 @@ export async function atualizarPet(petId: string, dados: PetInput): Promise<Acti
   if (!count) return { ok: false, erro: ERRO_PERMISSAO };
 
   revalidatePath("/tutores");
+  revalidatePath("/pets");
   return { ok: true };
 }
 
-// Diferente de servicos/planos, pet pode ser removido de verdade — nao ha
-// ainda nenhuma assinatura (Fase 4) que dependa dele. Quando essa fase
-// existir, um pet com assinatura ativa vai falhar aqui por causa da FK
-// (assinaturas.pet_id references pets(id), sem cascade) — o erro generico
-// abaixo ja cobre esse caso, so nao com uma mensagem especifica ainda.
-export async function removerPet(petId: string): Promise<ActionResult> {
+// Migration 0019 — soft-delete, substitui a exclusão definitiva que existia
+// aqui antes (removerPet). Pet com histórico de agendamento/venda perderia
+// esse histórico com um DELETE de verdade — desativar resolve o problema
+// real (poluir a lista com quem não é mais atendido) sem esse custo.
+export async function alternarAtivoPet(petId: string, ativo: boolean): Promise<ActionResult> {
   const supabase = createClient();
 
   const { error, count } = await supabase
     .from("pets")
-    .delete({ count: "exact" })
+    .update({ ativo }, { count: "exact" })
     .eq("id", petId);
 
   if (error) {
-    console.error("Erro ao remover pet:", error);
+    console.error("Erro ao alternar pet ativo/inativo:", error);
     return { ok: false, erro: ERRO_GENERICO };
   }
   if (!count) return { ok: false, erro: ERRO_PERMISSAO };
 
   revalidatePath("/tutores");
+  revalidatePath("/pets");
+  return { ok: true };
+}
+
+// Migration 0020 — "Chamar de volta" (app/(app)/pets/PetsSection.tsx),
+// registra o pedido de mensagem de retenção em `lembretes`. De propósito
+// SEM disparar envio nenhum daqui: essa mensagem é categoria MARKETING na
+// Meta (diferente dos outros tipos, todos UTILITY — ver comentário da
+// migration 0020), e o template/texto final ainda não foi desenhado. A
+// linha fica 'pendente' até isso existir; se o cron enviar-lembretes
+// pegar ela antes, falha de forma segura (ver montarMensagem() em
+// supabase/functions/_shared/templates.ts, case default).
+export async function dispararMensagemRetencao(
+  petId: string,
+  diasSemVisita: number
+): Promise<ActionResult> {
+  const supabase = createClient();
+
+  const { data: pet, error: erroPet } = await supabase
+    .from("pets")
+    .select("nome, tutor_id")
+    .eq("id", petId)
+    .single();
+
+  if (erroPet || !pet) {
+    console.error("Erro ao buscar pet pra mensagem de retenção:", erroPet);
+    return { ok: false, erro: ERRO_GENERICO };
+  }
+
+  // Mesmo papel de "quem decide marcar o banho" usado pro resto da agenda
+  // (contatos_adicionais.papel='agendamento') — resolver_contato() cai no
+  // tutor principal quando não há um contato específico pra esse papel.
+  const { data: contatoResolvido } = await supabase.rpc("resolver_contato", {
+    p_tutor_id: pet.tutor_id,
+    p_papel: "agendamento",
+  });
+  const contato = Array.isArray(contatoResolvido) ? contatoResolvido[0] : contatoResolvido;
+
+  const { error } = await supabase.from("lembretes").insert({
+    tutor_id: pet.tutor_id,
+    tipo: "retencao_cliente",
+    destinatario: "tutor",
+    papel_destino: "agendamento",
+    canal: "whatsapp",
+    status: "pendente",
+    telefone_destino: contato?.telefone ?? null,
+    nome_destino: contato?.nome ?? null,
+    dados_extra: { petNome: pet.nome, dias: diasSemVisita },
+  });
+
+  if (error) {
+    console.error("Erro ao registrar mensagem de retenção:", error);
+    return { ok: false, erro: ERRO_GENERICO };
+  }
+
+  revalidatePath("/pets");
   return { ok: true };
 }
 

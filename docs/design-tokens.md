@@ -97,6 +97,23 @@ Não estava no briefing, mas o app já precisava dele: erro de formulário,
 cobrança que falhou, tutor que não apareceu. É o único sinal que o usuário lê
 como problema sem precisar ler o texto.
 
+### Roxo — em andamento (18/ago/2026)
+
+| Token | Valor | Uso |
+|---|---|---|
+| `progress-50` | `#FAF5FF` | Fundo do badge "Presente" |
+| `progress-100` | `#E9D8FD` | Borda |
+| `progress-500` | `#805AD5` | Preenchimento, ícone |
+| `progress-600` | `#6B46C1` | Hover |
+| `progress-700` | `#553C9A` | Texto roxo, ponto de status |
+
+Também não estava no briefing. Surgiu quando o quadro de visitas do dia
+(Visão Geral) ganhou o status "Presente" (pet chegou, está no banho/tosa
+agora) — nem `info` (azul, já é "pronto p/ busca" no mesmo quadro) nem
+`atencao` (amarelo, já é "reagendado") serviam sem repetir uma cor pra dois
+status diferentes na mesma tela. Roxo fica visualmente longe dos outros 4,
+pra continuar dando pra reconhecer o status de relance.
+
 ### Texto e superfícies
 
 | Token | Valor | Uso | Contraste no fundo da página |
@@ -138,16 +155,24 @@ chamativa da tela.
 ## Tons de status
 
 Todos os mapas de status do app (agenda, cobrança, assinatura, serviço) apontam
-para os mesmos cinco tons, então "pago", "confirmado" e "ativa" têm exatamente
-o mesmo verde em qualquer tela.
+para os mesmos seis tons, então "pago", "confirmado" e "ativa" têm exatamente
+o mesmo verde em qualquer tela. O sexto (`progresso`) é usado só pelo mapa de
+status de agendamento — nenhum outro domínio (cobrança, assinatura, serviço)
+precisou dele até agora.
 
 | Tom | Cor | Significado | Exemplos |
 |---|---|---|---|
 | `neutro` | Cinza | Estado sem ação pendente | agendado, cancelado, isento, inativo |
-| `info` | Azul | Em andamento, sob controle | pronto p/ busca, processando |
-| `sucesso` | Verde | Resolvido | confirmado, entregue, pago, ativa |
+| `progresso` | Roxo | Em execução agora — alguém está com a mão nisso | presente (pet no banho/tosa) |
+| `info` | Azul | Resolvido, aguardando sem trabalho ativo | pronto p/ busca, processando |
+| `sucesso` | Verde | Concluído | confirmado, entregue, pago, ativa |
 | `atencao` | Amarelo | **Precisa de alguém** | aguardando pagamento, cadastro pendente, pausada, reagendado |
 | `erro` | Vermelho | Deu errado | falhou, estornado, faltou |
+
+`progresso` e `info` parecem próximos ("em andamento" x "pronto"), mas a
+diferença é literal: `progresso` é o pet estar sendo atendido NESTE momento;
+`info`/pronto é o atendimento já ter acabado e só faltar alguém buscar — nada
+sendo feito ativamente. Por isso não dá pra reaproveitar o mesmo tom.
 
 Duas mudanças de semântica que vieram junto com a paleta:
 
@@ -177,6 +202,8 @@ Todas as combinações em uso, verificadas:
 | Badge atenção (`cta-700` / `cta-50`) | 5,34:1 | 4,5 ✅ |
 | Badge erro (`danger-600` / `danger-50`) | 5,11:1 | 4,5 ✅ |
 | Anel de foco (`brand-500` / `surface`) | 5,17:1 | 3,0 ✅ |
+| Badge progresso (`progress-700` / `progress-50`) | 7,83:1 | 4,5 ✅ |
+| Texto roxo (`progress-700` / `surface`) | 8,02:1 | 4,5 ✅ |
 
 Para comparar, a paleta anterior tinha **branco sobre `#C99A3E` = 2,57:1** no
 botão primário (reprovava AA) e **texto auxiliar em 4,41:1** (também reprovava,

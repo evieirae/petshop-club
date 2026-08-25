@@ -35,3 +35,15 @@ next-env.d.ts
 .vercel
 
 venv/
+
+# supabase — estado local do CLI (project-ref, pooler-url, versoes do stack).
+# Muda a cada `supabase link` e descreve a maquina de quem rodou, nao o
+# projeto. As migrations e as functions SIM sao versionadas.
+supabase/.temp/
+
+# Claude Code — configuracao local da maquina (settings.local.json, locks).
+.claude/
+
+# Arquivos aposentados por refatoracao, aguardando exclusao manual.
+# Ver _to_delete/LEIA-ME.md
+_to_delete/

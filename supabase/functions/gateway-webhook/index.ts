@@ -38,18 +38,25 @@ function tokenValido(recebido: string | null): boolean {
 // da própria linha (cobrancas.id / cobrancas_avulsas.id /
 // mensalidades_petshop.id) — mas o webhook do Asaas não devolve a origem,
 // só o payment.id (gateway_payment_id) e o externalReference. Pra saber
-// qual das 3 tabelas atualizar, tenta as três por gateway_payment_id (elas
-// são mutuamente exclusivas: um payment.id só existe em uma tabela).
+// qual das 4 tabelas atualizar, tenta as quatro por gateway_payment_id
+// (elas são mutuamente exclusivas: um payment.id só existe em uma tabela).
+//
+// 'venda' adicionada em 18/ago/2026 (Fase 3b — Pix na tela de Vendas, ver
+// migration 0015_venda_pix.sql): mesmo papel das outras três, só que quem
+// cria a cobrança não é processar-cobrancas, é a Edge Function
+// criar-pix-venda.
 // deno-lint-ignore no-explicit-any
-async function resolverOrigem(supabase: any, gatewayPaymentId: string): Promise<"cobranca" | "cobranca_avulsa" | "mensalidade" | null> {
-  const [{ data: c }, { data: ca }, { data: m }] = await Promise.all([
+async function resolverOrigem(supabase: any, gatewayPaymentId: string): Promise<"cobranca" | "cobranca_avulsa" | "mensalidade" | "venda" | null> {
+  const [{ data: c }, { data: ca }, { data: m }, { data: v }] = await Promise.all([
     supabase.from("cobrancas").select("id").eq("gateway_payment_id", gatewayPaymentId).maybeSingle(),
     supabase.from("cobrancas_avulsas").select("id").eq("gateway_payment_id", gatewayPaymentId).maybeSingle(),
     supabase.from("mensalidades_petshop").select("id").eq("gateway_payment_id", gatewayPaymentId).maybeSingle(),
+    supabase.from("vendas").select("id").eq("gateway_payment_id", gatewayPaymentId).maybeSingle(),
   ]);
   if (c) return "cobranca";
   if (ca) return "cobranca_avulsa";
   if (m) return "mensalidade";
+  if (v) return "venda";
   return null;
 }
 

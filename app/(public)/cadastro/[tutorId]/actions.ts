@@ -15,6 +15,9 @@ export type CadastroPetInput = {
   // Migration 0008 — usado pra concordância de gênero nas mensagens
   // automáticas (ex.: pet_pronto). Null = não informado.
   sexo: "macho" | "femea" | null;
+  // Migration 0010 — decide se a tela sugere a lista de raças mais comuns
+  // (cachorro/gato) ou texto livre (outro/null). Não restringe `raca`.
+  especie: "cachorro" | "gato" | "outro" | null;
 };
 
 export type CadastroInput = {
@@ -95,6 +98,7 @@ export async function enviarCadastro(
           raca: pet.raca?.trim() || null,
           observacoes: pet.observacoes?.trim() || null,
           sexo: pet.sexo,
+          especie: pet.especie,
         })
         .eq("id", pet.id)
         .eq("tutor_id", tutorId);
@@ -112,6 +116,7 @@ export async function enviarCadastro(
         raca: pet.raca?.trim() || null,
         observacoes: pet.observacoes?.trim() || null,
         sexo: pet.sexo,
+        especie: pet.especie,
       });
 
       if (error) {

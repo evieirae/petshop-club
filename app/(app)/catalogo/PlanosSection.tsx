@@ -52,6 +52,15 @@ export function PlanosSection({
 }) {
   const [criando, setCriando] = useState(false);
   const semServicos = servicos.length === 0;
+  // Filtro (pedido de 20/ago/2026) — client-side, mesmo padrão de
+  // Tutores/Pets/Serviços.
+  const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativos" | "inativos">("todos");
+
+  const planosFiltrados = planos.filter((plano) => {
+    if (statusFiltro === "ativos" && !plano.ativo) return false;
+    if (statusFiltro === "inativos" && plano.ativo) return false;
+    return true;
+  });
 
   return (
     <section>
@@ -87,14 +96,39 @@ export function PlanosSection({
         </div>
       )}
 
+      {planos.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-surface-border bg-surface-card p-3">
+          <div>
+            <label htmlFor="planos_filtro_status" className="mb-1 block text-xs font-medium text-ink-500">
+              Status
+            </label>
+            <select
+              id="planos_filtro_status"
+              className={inputClass}
+              value={statusFiltro}
+              onChange={(e) => setStatusFiltro(e.target.value as "todos" | "ativos" | "inativos")}
+            >
+              <option value="todos">Todos</option>
+              <option value="ativos">Ativos</option>
+              <option value="inativos">Inativos</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 space-y-3">
         {planos.length === 0 && !criando ? (
           <EmptyState
             titulo="Nenhum plano cadastrado"
             descricao="Cada plano combina serviços (banho, tosa) com um intervalo de dias e um preço fixo de assinatura por porte."
           />
+        ) : planosFiltrados.length === 0 ? (
+          <EmptyState
+            titulo="Nenhum plano encontrado com esse filtro"
+            descricao="Ajuste o filtro acima."
+          />
         ) : (
-          planos.map((plano) => (
+          planosFiltrados.map((plano) => (
             <PlanoCard
               key={plano.id}
               plano={plano}

@@ -42,6 +42,7 @@ const config: Config = {
         success: palette.success,
         cta: palette.cta,
         danger: palette.danger,
+        progress: palette.progress,
         ink: palette.ink,
         surface: palette.surface,
       },

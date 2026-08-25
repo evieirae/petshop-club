@@ -33,6 +33,9 @@ type FormState = {
   horario_corte_confirmacao_tarde: string;
   horario_limite_petshop_tarde: string;
   falta_consome_visita_paga: boolean;
+  comissao_ativa: boolean;
+  comissao_percentual_venda: string;
+  comissao_percentual_servico: string;
 };
 
 function estadoInicial(petshop: Petshop): FormState {
@@ -54,6 +57,12 @@ function estadoInicial(petshop: Petshop): FormState {
       petshop.horario_limite_petshop_tarde
     ),
     falta_consome_visita_paga: petshop.falta_consome_visita_paga,
+    // Migration 0016 — guardado como string no form (igual
+    // intervalo_agendamento_minutos) pra deixar o campo esvaziar enquanto a
+    // pessoa digita, sem virar NaN no meio do caminho.
+    comissao_ativa: petshop.comissao_ativa,
+    comissao_percentual_venda: String(petshop.comissao_percentual_venda),
+    comissao_percentual_servico: String(petshop.comissao_percentual_servico),
   };
 }
 
@@ -106,6 +115,20 @@ export function ConfiguracoesForm({
       novosErros.intervalo_agendamento_minutos = "Precisa ser um número de minutos maior que zero.";
     }
 
+    // Comissão só é validada quando está ligada — com o interruptor
+    // desligado o valor não é usado em lugar nenhum, e travar o "Salvar"
+    // por causa de um campo escondido seria confuso.
+    if (form.comissao_ativa) {
+      const pctVenda = Number(form.comissao_percentual_venda);
+      if (Number.isNaN(pctVenda) || pctVenda < 0 || pctVenda > 100) {
+        novosErros.comissao_percentual_venda = "Informe um percentual entre 0 e 100.";
+      }
+      const pctServico = Number(form.comissao_percentual_servico);
+      if (Number.isNaN(pctServico) || pctServico < 0 || pctServico > 100) {
+        novosErros.comissao_percentual_servico = "Informe um percentual entre 0 e 100.";
+      }
+    }
+
     setErros(novosErros);
     return Object.keys(novosErros).length === 0;
   }
@@ -128,6 +151,9 @@ export function ConfiguracoesForm({
       horario_corte_confirmacao_tarde: form.horario_corte_confirmacao_tarde,
       horario_limite_petshop_tarde: form.horario_limite_petshop_tarde,
       falta_consome_visita_paga: form.falta_consome_visita_paga,
+      comissao_ativa: form.comissao_ativa,
+      comissao_percentual_venda: Number(form.comissao_percentual_venda) || 0,
+      comissao_percentual_servico: Number(form.comissao_percentual_servico) || 0,
     };
 
     startTransition(async () => {
@@ -142,7 +168,10 @@ export function ConfiguracoesForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 space-y-6 pb-24">
+    // pb-24 saiu daqui em 20/ago/2026: a seção de Funcionários agora vem
+    // logo abaixo do formulário (fora dele), e o respiro final ficou na
+    // página, não no <form>.
+    <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       <FormSection
         numero="1"
         titulo="Expediente e intervalo"
@@ -343,6 +372,67 @@ export function ConfiguracoesForm({
             )}
           </p>
         </div>
+      </FormSection>
+
+      <FormSection
+        numero="4"
+        titulo="Comissão da equipe"
+        descricao="Percentual padrão que cada funcionário ganha. Quem trabalha aqui se cadastra logo abaixo, e lá dá pra dar um percentual diferente pra uma pessoa específica."
+      >
+        <div className="sm:col-span-2">
+          <Toggle
+            checked={form.comissao_ativa}
+            onChange={(v) => atualizar("comissao_ativa", v)}
+            labelOn="Trabalho com comissão"
+            labelOff="Sem comissão"
+          />
+        </div>
+
+        {form.comissao_ativa && (
+          <>
+            <FormField
+              label="Comissão sobre venda de produto (%)"
+              htmlFor="comissao_percentual_venda"
+              hint="Sobre o valor da venda. O valor é congelado em cada venda — mudar aqui não mexe no que já foi vendido."
+              error={erros.comissao_percentual_venda}
+            >
+              <input
+                id="comissao_percentual_venda"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                inputMode="decimal"
+                className={inputClass}
+                value={form.comissao_percentual_venda}
+                onChange={(e) => atualizar("comissao_percentual_venda", e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="Comissão sobre serviço (%)"
+              htmlFor="comissao_percentual_servico"
+              hint="Sobre o valor do banho/tosa executado. Conta só visita marcada como entregue, e só quando alguém está marcado como responsável por ela."
+              error={erros.comissao_percentual_servico}
+            >
+              <input
+                id="comissao_percentual_servico"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                inputMode="decimal"
+                className={inputClass}
+                value={form.comissao_percentual_servico}
+                onChange={(e) => atualizar("comissao_percentual_servico", e.target.value)}
+              />
+            </FormField>
+            <p className="text-xs text-ink-500 sm:col-span-2">
+              Numa visita de plano, o valor de uma visita é a cobrança do mês
+              dividida pelo número de banhos daquele mês — mesma conta que já
+              aparece no Financeiro.
+            </p>
+          </>
+        )}
       </FormSection>
 
       <FormSection

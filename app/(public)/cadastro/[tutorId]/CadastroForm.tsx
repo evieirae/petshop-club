@@ -2,8 +2,9 @@
 
 import { botao } from "@/lib/ui/styles";
 import { useState, useTransition, type FormEvent } from "react";
-import type { ContatoAdicional, Pet, Porte, Tutor } from "@/types/database";
+import type { ContatoAdicional, EspeciePet, Pet, Porte, Tutor } from "@/types/database";
 import { FormField, inputClass } from "@/components/ui/FormField";
+import { CampoRaca } from "@/components/pets/CampoRaca";
 import { enviarCadastro, type CadastroPetInput } from "./actions";
 
 // Cada pet em edicao tem uma chave local (pra key do React e pra remover
@@ -43,6 +44,7 @@ export function CadastroForm({
           raca: p.raca,
           observacoes: p.observacoes,
           sexo: p.sexo,
+          especie: p.especie,
         }))
       : [
           {
@@ -52,6 +54,7 @@ export function CadastroForm({
             raca: null,
             observacoes: null,
             sexo: null,
+            especie: null,
           },
         ]
   );
@@ -79,6 +82,7 @@ export function CadastroForm({
         raca: null,
         observacoes: null,
         sexo: null,
+        especie: null,
       },
     ]);
   }
@@ -210,12 +214,31 @@ export function CadastroForm({
                   ))}
                 </select>
               </FormField>
-              <FormField label="Raça" htmlFor={`pet_raca_${pet.chave}`} hint="Opcional.">
-                <input
-                  id={`pet_raca_${pet.chave}`}
+              <FormField label="Tipo de pet" htmlFor={`pet_especie_${pet.chave}`} hint="Ajuda a sugerir as raças mais comuns.">
+                <select
+                  id={`pet_especie_${pet.chave}`}
                   className={inputClass}
-                  value={pet.raca ?? ""}
-                  onChange={(e) => atualizarPet(pet.chave, "raca", e.target.value)}
+                  value={pet.especie ?? ""}
+                  onChange={(e) => {
+                    // Trocar de espécie invalida a raça escolhida antes (uma
+                    // raça de cachorro não faz sentido depois de mudar pra
+                    // gato) — mesma decisão de UX do PetForm em TutoresSection.
+                    atualizarPet(pet.chave, "especie", (e.target.value || null) as EspeciePet | null);
+                    atualizarPet(pet.chave, "raca", null);
+                  }}
+                >
+                  <option value="">Não informado</option>
+                  <option value="cachorro">Cachorro</option>
+                  <option value="gato">Gato</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </FormField>
+              <FormField label="Raça" htmlFor={`pet_raca_${pet.chave}`} hint="Opcional.">
+                <CampoRaca
+                  id={`pet_raca_${pet.chave}`}
+                  especie={pet.especie}
+                  raca={pet.raca}
+                  onChange={(valor) => atualizarPet(pet.chave, "raca", valor)}
                 />
               </FormField>
               <FormField label="Sexo" htmlFor={`pet_sexo_${pet.chave}`} hint="Opcional.">

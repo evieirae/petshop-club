@@ -37,6 +37,17 @@ export function ServicosSection({
   precos: PrecoServico[];
 }) {
   const [criando, setCriando] = useState(false);
+  // Filtros (pedido de 20/ago/2026) — client-side sobre o que já veio do
+  // server, mesmo padrão usado em Tutores/Pets.
+  const [categoriaFiltro, setCategoriaFiltro] = useState<number | "todas">("todas");
+  const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativos" | "inativos">("todos");
+
+  const servicosFiltrados = servicos.filter((servico) => {
+    if (categoriaFiltro !== "todas" && servico.categoria_servico_id !== categoriaFiltro) return false;
+    if (statusFiltro === "ativos" && !servico.ativo) return false;
+    if (statusFiltro === "inativos" && servico.ativo) return false;
+    return true;
+  });
 
   return (
     <section>
@@ -67,14 +78,57 @@ export function ServicosSection({
         </div>
       )}
 
+      {servicos.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-surface-border bg-surface-card p-3">
+          <div>
+            <label htmlFor="servicos_filtro_categoria" className="mb-1 block text-xs font-medium text-ink-500">
+              Categoria
+            </label>
+            <select
+              id="servicos_filtro_categoria"
+              className={inputClass}
+              value={categoriaFiltro}
+              onChange={(e) => setCategoriaFiltro(e.target.value === "todas" ? "todas" : Number(e.target.value))}
+            >
+              <option value="todas">Todas</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="servicos_filtro_status" className="mb-1 block text-xs font-medium text-ink-500">
+              Status
+            </label>
+            <select
+              id="servicos_filtro_status"
+              className={inputClass}
+              value={statusFiltro}
+              onChange={(e) => setStatusFiltro(e.target.value as "todos" | "ativos" | "inativos")}
+            >
+              <option value="todos">Todos</option>
+              <option value="ativos">Ativos</option>
+              <option value="inativos">Inativos</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 space-y-3">
         {servicos.length === 0 && !criando ? (
           <EmptyState
             titulo="Nenhum serviço cadastrado"
             descricao="Comece pelo básico: banho, tosa higiênica, tosa completa, hidratação. Os planos da seção abaixo só podem usar serviços já cadastrados aqui."
           />
+        ) : servicosFiltrados.length === 0 ? (
+          <EmptyState
+            titulo="Nenhum serviço encontrado com esse filtro"
+            descricao="Ajuste os filtros acima."
+          />
         ) : (
-          servicos.map((servico) => (
+          servicosFiltrados.map((servico) => (
             <ServicoCard
               key={servico.id}
               servico={servico}

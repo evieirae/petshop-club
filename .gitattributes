@@ -1,0 +1,25 @@
+# Normalizacao de fim de linha.
+#
+# O repositorio nasceu com LF no historico, mas o checkout no Windows gravou
+# CRLF no disco. Resultado: 14 arquivos apareciam como "100% modificados" no
+# git status sem uma unica mudanca real de conteudo — 8.196 linhas fantasma
+# num diff de 10.266. Isso destroi diff, blame e code review.
+#
+# `text=auto eol=lf` guarda tudo em LF no repositorio e faz o checkout em LF
+# tambem, inclusive no Windows. Editores modernos (VS Code, Cursor) lidam com
+# LF sem problema.
+#
+# Se um dia algum arquivo voltar a aparecer 100% modificado sem motivo:
+#   git add --renormalize .
+* text=auto eol=lf
+
+# Binarios — nunca converter.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.woff  binary
+*.woff2 binary

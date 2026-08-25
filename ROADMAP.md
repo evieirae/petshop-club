@@ -284,3 +284,40 @@ fake antes de encostar num petshop real.
 
 Esse ciclo completo rodando sem intervenção manual é a definição prática de
 **beta** aqui.
+
+## Fase 8 — Administração da plataforma, site institucional e soft-delete
+
+Pedido do Eduardo (20/ago/2026), fora da sequência original de fases — a
+plataforma precisava de um dono que não fosse equipe de nenhum petshop
+específico antes de conseguir crescer pra mais de um parceiro.
+
+- [x] **Admin da plataforma independente de petshop** — tabela nova
+      `admins_plataforma`, sem `petshop_id` nenhum (substitui
+      `usuarios_petshop.eh_admin_plataforma` da Fase 1). Login puramente
+      admin cai em `/admin` em vez de "Acesso pendente"; quem também é
+      equipe de um petshop mantém as duas identidades ao mesmo tempo. Ver
+      `supabase/migrations/0017_admin_plataforma_independente.sql`.
+- [x] **Área `/admin`** (grupo de rota `app/(admin)`, separado de
+      `app/(app)`): KPIs agregados de todos os petshops (`/admin`), taxas +
+      status da conta + cadastro de petshop/dono novo (`/admin/petshops`),
+      leads do site institucional (`/admin/leads`).
+- [x] **Congelamento/encerramento de conta** — `petshops.status`
+      (ativo/congelado/encerrado), mesma proteção RLS + trigger das taxas.
+      Petshop não-ativo bloqueia o login da equipe dele em
+      `app/(app)/layout.tsx`.
+- [x] **Site institucional** — `app/page.tsx` vira a Home pública
+      (apresentação do produto + formulário de cotação); o painel logado se
+      mudou pra `/painel`. Formulário grava em `leads_saas`
+      (`supabase/migrations/0018_leads_saas.sql`) sem nunca criar petshop
+      sozinho — virar petshop de verdade é sempre manual, em
+      `/admin/leads` ("Converter em petshop").
+- [x] **Soft-delete de tutores e pets** — `tutores.ativo`/`pets.ativo`
+      (`supabase/migrations/0019_tutores_pets_ativo.sql`), substituindo a
+      exclusão definitiva de pet (tutor nunca teve exclusão). Mesmo padrão
+      de `funcionarios.ativo`/`produtos.ativo`: histórico intacto,
+      reativável, escondido dos pickers de agendamento/venda por padrão.
+
+Sem tela de convite por e-mail (não há SMTP configurado no projeto ainda):
+o cadastro de dono novo gera uma senha temporária mostrada uma única vez
+na tela, pro admin repassar manualmente — mesmo espírito do link de
+cadastro de tutor (Fase 3).

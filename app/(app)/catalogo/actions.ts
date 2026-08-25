@@ -35,7 +35,7 @@ export async function criarServico(
     return { ok: false, erro: ERRO_GENERICO };
   }
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }
 
@@ -56,7 +56,7 @@ export async function atualizarServico(
   }
   if (!count) return { ok: false, erro: ERRO_PERMISSAO };
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }
 
@@ -79,7 +79,7 @@ export async function alternarAtivoServico(
   }
   if (!count) return { ok: false, erro: ERRO_PERMISSAO };
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }
 
@@ -105,7 +105,7 @@ export async function salvarPrecosServico(
     return { ok: false, erro: ERRO_GENERICO };
   }
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }
 
@@ -141,7 +141,7 @@ export async function criarPlano(
     return { ok: false, erro: ERRO_GENERICO };
   }
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true, id: data.id as string };
 }
 
@@ -162,7 +162,7 @@ export async function atualizarPlano(
   }
   if (!count) return { ok: false, erro: ERRO_PERMISSAO };
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }
 
@@ -185,7 +185,7 @@ export async function alternarAtivoPlano(
   }
   if (!count) return { ok: false, erro: ERRO_PERMISSAO };
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }
 
@@ -219,7 +219,7 @@ export async function salvarPlanoServicos(
     }
   }
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }
 
@@ -245,6 +245,6 @@ export async function salvarPlanoPrecos(
     return { ok: false, erro: ERRO_GENERICO };
   }
 
-  revalidatePath("/planos");
+  revalidatePath("/catalogo");
   return { ok: true };
 }

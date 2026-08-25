@@ -175,7 +175,7 @@ export const tabela = {
  *  BADGES DE STATUS
  * ======================================================================== */
 
-export type TomBadge = "neutro" | "info" | "sucesso" | "atencao" | "erro";
+export type TomBadge = "neutro" | "info" | "sucesso" | "atencao" | "erro" | "progresso";
 
 const BADGE_TOM: Record<TomBadge, string> = {
   neutro: "bg-surface-muted text-ink-500",
@@ -183,6 +183,10 @@ const BADGE_TOM: Record<TomBadge, string> = {
   sucesso: "bg-success-50 text-success-700",
   atencao: "bg-cta-50 text-cta-700",
   erro: "bg-danger-50 text-danger-600",
+  // Roxo — "em andamento, mão na massa" (18/ago/2026, ver lib/design/tokens.ts).
+  // Só usado hoje pelo status "Presente" do quadro de visitas (Visão Geral/
+  // Agenda) — os outros 5 tons continuam cobrindo o resto do app sozinhos.
+  progresso: "bg-progress-50 text-progress-700",
 };
 
 const BADGE_BASE = "inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-xs font-medium";
@@ -217,6 +221,7 @@ export function pontoStatus(tom: TomBadge): string {
     sucesso: "bg-success-700",
     atencao: "bg-cta-700",
     erro: "bg-danger-500",
+    progresso: "bg-progress-700",
   };
   return cx("h-1.5 w-1.5 shrink-0 rounded-full", cores[tom]);
 }

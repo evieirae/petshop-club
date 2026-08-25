@@ -222,17 +222,43 @@ Olá {{1}}! Pra ativar a cobrança automática do plano do {{2}} na {{3}}, cadas
 
 ---
 
+## 8. `pet_entregue`
+
+- **Categoria:** UTILITY · **Idioma:** `pt_BR`
+- **Gerado por:** trigger `trg_pet_pronto_lembrete()` (equipe marca
+  "entregue" — pelo quadro de visitas do dia na Visão Geral, ou pela
+  Agenda) — migration `0013_pet_entregue_lembrete.sql`
+- **Vai para:** contato de `papel='busca_entrega'`
+
+**Corpo:**
+
+```
+Olá {{1}}! O {{2}} já foi entregue — muito obrigado por confiar na {{3}}. Até a próxima!
+```
+
+| # | Conteúdo | Exemplo |
+|---|----------|---------|
+| 1 | Primeiro nome de quem buscou | Rafael |
+| 2 | Nome do pet | Thor |
+| 3 | Nome do petshop | Petshop Pedra Branca |
+
+Sem botão. Diferente de `pet_pronto`, não precisa de parâmetro de
+concordância de gênero — "entregue" não muda entre macho/fêmea.
+
+---
+
 ## Checklist ao submeter
 
-1. Criar os 7 templates no WhatsApp Manager com **exatamente** os nomes
+1. Criar os 8 templates no WhatsApp Manager com **exatamente** os nomes
    acima (minúsculo, com underscore — a Meta não aceita maiúscula/espaço).
-   `cobranca_pix` já tem código de geração e envio completo (17/ago/2026) —
-   dá pra submeter assim que o produto WhatsApp estiver configurado.
-   `aviso_cobranca` e `cadastro_cartao` ainda não têm gerador (checkpoint
-   D-1 de cobrança e fluxo de tokenização de cartão, respectivamente) —
-   deixar pra depois que esses pedaços da Fase 6 existirem de verdade.
-   Quando forem implementados, usar `primeiroNome()` no parâmetro de nome
-   (mesmo padrão dos templates 1, 2 e 5).
+   `cobranca_pix` já tem código de geração e envio completo (17/ago/2026),
+   e `pet_entregue` também (18/ago/2026) — dá pra submeter os dois assim
+   que o produto WhatsApp estiver configurado. `aviso_cobranca` e
+   `cadastro_cartao` ainda não têm gerador (checkpoint D-1 de cobrança e
+   fluxo de tokenização de cartão, respectivamente) — deixar pra depois que
+   esses pedaços da Fase 6 existirem de verdade. Quando forem implementados,
+   usar `primeiroNome()` no parâmetro de nome (mesmo padrão dos templates 1,
+   2, 5 e 8).
 2. Categoria `UTILITY` em todos. Se a Meta reclassificar pra `MARKETING`,
    revise o texto: provavelmente ficou promocional demais.
 3. Nas URLs dinâmicas, usar o domínio real de produção — a base fica

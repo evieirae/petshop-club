@@ -171,6 +171,29 @@ export function montarMensagem(ctx: ContextoMensagem): MensagemMontada | null {
       };
     }
 
+    case "pet_entregue": {
+      // Migration 0013 (18/ago/2026) — fecha o mesmo ciclo do pet_pronto
+      // pelo outro lado: agradecimento automático quando a equipe marca
+      // "entregue" (quadro de visitas do dia na Visão Geral, ou Agenda).
+      // "Entregue" não muda por gênero (mesma forma pra macho/fêmea), então
+      // — diferente de pet_pronto — não precisa de parâmetro de
+      // concordância.
+      if (!ctx.info) return null;
+      const nome = primeiroNome(param(ctx.nomeDestino, "tutor"));
+      return {
+        template: {
+          nome: "pet_entregue",
+          idioma: IDIOMA,
+          parametrosCorpo: [
+            nome,
+            param(ctx.info.petNome, "seu pet"),
+            param(ctx.info.petshopNome, "o petshop"),
+          ],
+        },
+        textoLivre: `Olá ${nome}! O ${ctx.info.petNome} já foi entregue — muito obrigado por confiar na ${ctx.info.petshopNome}. Até a próxima!`,
+      };
+    }
+
     case "cobranca_pix": {
       // Implementado em 17/ago/2026 (docs/fase6_pagamentos.md, gap fechado)
       // — gerado por processar-cobrancas logo depois de criar a cobrança

@@ -3,10 +3,13 @@
 import { botao } from "@/lib/ui/styles";
 import { Badge } from "@/components/ui/Badge";
 import type { TomBadge } from "@/lib/ui/styles";
-import { useState, useTransition, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import type {
   Assinatura,
   ContatoAdicional,
+  EspeciePet,
+  FormaPagamento,
   PapelContato,
   Pet,
   Plano,
@@ -16,8 +19,11 @@ import type {
 } from "@/types/database";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField, inputClass } from "@/components/ui/FormField";
+import { CampoRaca } from "@/components/pets/CampoRaca";
 import { gerarHorariosDisponiveis, type ExpedientePetshop } from "@/lib/horarios";
 import {
+  alternarAtivoPet,
+  alternarAtivoTutor,
   atualizarPet,
   atualizarTutor,
   cancelarAssinatura,
@@ -27,10 +33,10 @@ import {
   gerarLinkCadastro,
   pausarAssinatura,
   removerContatoAdicional,
-  removerPet,
   retomarAssinatura,
   salvarContatoAdicional,
   type ActionResult,
+  type PetInput,
 } from "./actions";
 
 const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -97,6 +103,39 @@ export function TutoresSection({
   assinaturas: Assinatura[];
 }) {
   const [criando, setCriando] = useState(false);
+  // Migration 0019 (soft-delete) — inativos ficam escondidos por padrão,
+  // atrás desse toggle: diferente de funcionários/produtos, a lista de
+  // tutores tende a crescer bastante, e deixar os inativos sempre visíveis
+  // voltaria a poluir a tela (a queixa original que motivou o
+  // ativo/inativo).
+  const [mostrarInativos, setMostrarInativos] = useState(false);
+  // Filtros (pedido de 20/ago/2026) — mesmo espírito do toggle acima,
+  // client-side sobre o que já veio do server.
+  const [busca, setBusca] = useState("");
+  const [statusCadastro, setStatusCadastro] = useState<"todos" | "completo" | "pendente">("todos");
+  // Fase 4 (cadastro pelo Pet) — a tela nova de /pets linka "Ver tutor" pra
+  // cá com ?tutor=<id>, pra abrir direto no card certo em vez de forçar a
+  // equipe a procurar numa lista que pode ter dezenas de tutores.
+  const searchParams = useSearchParams();
+  const tutorIdFoco = searchParams.get("tutor");
+
+  const inativosCount = tutores.filter((t) => !t.ativo).length;
+  const termoBusca = busca.trim().toLowerCase();
+
+  // O tutor "em foco" (via ?tutor=) aparece mesmo se estiver inativo ou não
+  // bater com o filtro atual — um link direto de outra tela não pode cair
+  // num card que simplesmente não existe na lista.
+  const tutoresExibidos = tutores.filter((tutor) => {
+    if (tutor.id === tutorIdFoco) return true;
+    if (!tutor.ativo && !mostrarInativos) return false;
+    if (termoBusca && !tutor.nome.toLowerCase().includes(termoBusca) && !tutor.telefone.includes(termoBusca)) {
+      return false;
+    }
+    if (statusCadastro === "completo" && !tutor.cadastro_completo) return false;
+    if (statusCadastro === "pendente" && tutor.cadastro_completo) return false;
+    return true;
+  });
+  const filtroAtivo = termoBusca.length > 0 || statusCadastro !== "todos";
 
   return (
     <section>
@@ -123,19 +162,67 @@ export function TutoresSection({
         </div>
       )}
 
+      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-surface-border bg-surface-card p-3">
+        <div className="min-w-[10rem] flex-1">
+          <label htmlFor="tutores_busca" className="mb-1 block text-xs font-medium text-ink-500">
+            Buscar por nome ou telefone
+          </label>
+          <input
+            id="tutores_busca"
+            className={inputClass}
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="ex.: Maria ou (48) 99999-0000"
+          />
+        </div>
+        <div>
+          <label htmlFor="tutores_filtro_cadastro" className="mb-1 block text-xs font-medium text-ink-500">
+            Cadastro
+          </label>
+          <select
+            id="tutores_filtro_cadastro"
+            className={inputClass}
+            value={statusCadastro}
+            onChange={(e) => setStatusCadastro(e.target.value as "todos" | "completo" | "pendente")}
+          >
+            <option value="todos">Todos</option>
+            <option value="completo">Completo</option>
+            <option value="pendente">Pendente</option>
+          </select>
+        </div>
+      </div>
+
+      {inativosCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setMostrarInativos((v) => !v)}
+          className="mt-3 text-xs font-medium text-brand-700 hover:underline"
+        >
+          {mostrarInativos ? "Ocultar inativos" : `Mostrar inativos (${inativosCount})`}
+        </button>
+      )}
+
       <div className="mt-4 space-y-3">
-        {tutores.length === 0 && !criando ? (
+        {tutoresExibidos.length === 0 && !criando ? (
           <EmptyState
-            titulo="Nenhum tutor cadastrado"
-            descricao="Comece cadastrando só o telefone — depois copie o link de autopreenchimento pra mandar por WhatsApp."
-            itens={[
-              "O tutor preenche nome, endereço e pets pelo próprio link",
-              "Contato adicional por papel — ex.: quem busca o pet, se for diferente de quem agenda",
-              "O link também sai sozinho por WhatsApp assim que o tutor é cadastrado — copiar e mandar na mão é só o atalho",
-            ]}
+            titulo={filtroAtivo ? "Nenhum tutor encontrado com esse filtro" : "Nenhum tutor cadastrado"}
+            descricao={
+              filtroAtivo
+                ? "Ajuste a busca ou os filtros acima."
+                : "Comece cadastrando só o telefone — depois copie o link de autopreenchimento pra mandar por WhatsApp."
+            }
+            itens={
+              filtroAtivo
+                ? undefined
+                : [
+                    "O tutor preenche nome, endereço e pets pelo próprio link",
+                    "Contato adicional por papel — ex.: quem busca o pet, se for diferente de quem agenda",
+                    "O link também sai sozinho por WhatsApp assim que o tutor é cadastrado — copiar e mandar na mão é só o atalho",
+                  ]
+            }
           />
         ) : (
-          tutores.map((tutor) => (
+          tutoresExibidos.map((tutor) => (
             <TutorCard
               key={tutor.id}
               petshopId={petshopId}
@@ -146,6 +233,7 @@ export function TutoresSection({
               contatos={contatosAdicionais.filter((c) => c.tutor_id === tutor.id)}
               planos={planos}
               assinaturas={assinaturas.filter((a) => a.tutor_id === tutor.id)}
+              expandidoInicial={tutor.id === tutorIdFoco}
             />
           ))
         )}
@@ -175,7 +263,7 @@ function NovoTutorForm({ petshopId, onDone }: { petshopId: string; onDone: () =>
         nome: nome.trim() || null,
       });
       if (resultado.ok) {
-        onDone();
+        onDone?.();
       } else {
         setErro(resultado.erro);
       }
@@ -288,6 +376,7 @@ function TutorCard({
   contatos,
   planos,
   assinaturas,
+  expandidoInicial,
 }: {
   petshopId: string;
   expediente: ExpedientePetshop;
@@ -297,16 +386,36 @@ function TutorCard({
   contatos: ContatoAdicional[];
   planos: Plano[];
   assinaturas: Assinatura[];
+  expandidoInicial?: boolean;
 }) {
-  const [expandido, setExpandido] = useState(false);
+  const [expandido, setExpandido] = useState(expandidoInicial ?? false);
+  const [pendingAtivo, startTransitionAtivo] = useTransition();
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  function alternarAtivo() {
+    startTransitionAtivo(async () => {
+      await alternarAtivoTutor(tutor.id, !tutor.ativo);
+    });
+  }
+
+  // Rola até o card quando ele chega já aberto via ?tutor=<id> (link "Ver
+  // tutor" da tela /pets) — sem isso, o card certo abre fora da área
+  // visível numa lista longa e a equipe não percebe que já achou.
+  useEffect(() => {
+    if (expandidoInicial) {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-4">
+    <div ref={cardRef} className="rounded-xl border border-surface-border bg-surface-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <p className="font-medium text-ink-900">{tutor.nome}</p>
             <CadastroBadge completo={tutor.cadastro_completo} />
+            {!tutor.ativo && <Badge tom="neutro">Inativo</Badge>}
           </div>
           <p className="mt-0.5 text-xs text-ink-500">
             {tutor.telefone} ·{" "}
@@ -316,7 +425,15 @@ function TutorCard({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CopiarLinkButton tutorId={tutor.id} />
+          {tutor.ativo && <CopiarLinkButton tutorId={tutor.id} />}
+          <button
+            type="button"
+            disabled={pendingAtivo}
+            onClick={alternarAtivo}
+            className={botao({ variante: "neutra", tamanho: "sm" })}
+          >
+            {tutor.ativo ? "Desativar" : "Reativar"}
+          </button>
           <button
             type="button"
             onClick={() => setExpandido((v) => !v)}
@@ -352,6 +469,13 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
   const [email, setEmail] = useState(tutor.email ?? "");
   const [endereco, setEndereco] = useState(tutor.endereco ?? "");
   const [cadastroCompleto, setCadastroCompleto] = useState(tutor.cadastro_completo);
+  // Migration 0011 — preferência usada pelo trigger de cobrança (banco) pra
+  // já nascer a cobrança marcada. 'local' é o pedido do dono: presencial é
+  // mais barato pro tutor, sem taxa de serviço somada. O balcão ainda pode
+  // trocar por cobrança individual em Financeiro, sem mexer aqui.
+  const [formaPagamentoPreferida, setFormaPagamentoPreferida] = useState<FormaPagamento>(
+    tutor.forma_pagamento_preferida
+  );
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
   const [salvo, setSalvo] = useState(false);
@@ -373,6 +497,7 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
         email: email.trim() || null,
         endereco: endereco.trim() || null,
         cadastro_completo: cadastroCompleto,
+        forma_pagamento_preferida: formaPagamentoPreferida,
       });
       if (resultado.ok) {
         setSalvo(true);
@@ -419,6 +544,22 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
             value={endereco}
             onChange={(e) => setEndereco(e.target.value)}
           />
+        </FormField>
+        <FormField
+          label="Forma de pagamento preferida"
+          htmlFor={`tutor_forma_pagamento_${tutor.id}`}
+          hint="Cartão/Pix cobram pela plataforma (Asaas). No local = presencial, sem taxa de serviço."
+        >
+          <select
+            id={`tutor_forma_pagamento_${tutor.id}`}
+            className={inputClass}
+            value={formaPagamentoPreferida}
+            onChange={(e) => setFormaPagamentoPreferida(e.target.value as FormaPagamento)}
+          >
+            <option value="cartao">Cartão (pela plataforma)</option>
+            <option value="pix">Pix (pela plataforma)</option>
+            <option value="local">No local (presencial, sem taxa)</option>
+          </select>
         </FormField>
 
         <label className="flex items-center gap-2 text-sm text-ink-700 sm:col-span-2">
@@ -519,24 +660,43 @@ function PetsSubsection({
   );
 }
 
-function PetForm({
+// Exportado — a tela /pets (Fase 4, cadastro pelo Pet) reusa este mesmo
+// formulário pro passo final do fluxo "+ Novo Pet" (depois de escolher ou
+// criar o tutor), em vez de duplicar os campos nome/porte/espécie/raça/sexo.
+export function PetForm({
   petshopId,
   tutorId,
   portes,
   pet,
   onDone,
   onCancel,
+  onCollect,
+  labelSubmit,
 }: {
   petshopId?: string;
   tutorId?: string;
   portes: Porte[];
   pet?: Pet;
-  onDone: () => void;
+  // Opcional desde 20/ago/2026: no modo onCollect (abaixo) o formulário não
+  // salva nada, então quem fecha o fluxo é o chamador — a tela /pets usa
+  // esse modo e não passava onDone, o que era um erro de tipo silencioso
+  // (`tsc --noEmit` acusava, mas o dev server não).
+  onDone?: () => void;
   onCancel?: () => void;
+  // Fase 4 (ajuste 18/ago/2026 — bug reportado: a tela /pets prometia
+  // "cadastro começa pelo pet" mas o primeiro formulário que a pessoa via
+  // era o do tutor). Quando presente, o form NÃO salva nada sozinho — só
+  // valida e devolve os dados coletados pro chamador. Usado pelo fluxo
+  // "+ Novo Pet" de PetsSection.tsx, que agora coleta os dados do pet
+  // ANTES de perguntar o tutor, e só grava os dois juntos depois de
+  // identificar o tutor (passo 2).
+  onCollect?: (dados: PetInput) => void;
+  labelSubmit?: string;
 }) {
   const [nome, setNome] = useState(pet?.nome ?? "");
   const [porteId, setPorteId] = useState(pet?.porte_id ?? portes[0]?.id ?? 0);
-  const [raca, setRaca] = useState(pet?.raca ?? "");
+  const [especie, setEspecie] = useState<EspeciePet | "">(pet?.especie ?? "");
+  const [raca, setRaca] = useState<string | null>(pet?.raca ?? null);
   const [observacoes, setObservacoes] = useState(pet?.observacoes ?? "");
   const [sexo, setSexo] = useState<"macho" | "femea" | "">(pet?.sexo ?? "");
   const [pending, startTransition] = useTransition();
@@ -551,13 +711,19 @@ function PetForm({
       return;
     }
 
-    const dados = {
+    const dados: PetInput = {
       nome: nome.trim(),
       porte_id: porteId,
-      raca: raca.trim() || null,
+      raca: raca?.trim() || null,
       observacoes: observacoes.trim() || null,
       sexo: sexo || null,
+      especie: especie || null,
     };
+
+    if (onCollect) {
+      onCollect(dados);
+      return;
+    }
 
     startTransition(async () => {
       const resultado = pet
@@ -565,7 +731,7 @@ function PetForm({
         : await criarPet(petshopId!, tutorId!, dados);
 
       if (resultado.ok) {
-        onDone();
+        onDone?.();
       } else {
         setErro(resultado.erro);
       }
@@ -600,12 +766,34 @@ function PetForm({
           ))}
         </select>
       </FormField>
-      <FormField label="Raça" htmlFor={`pet_raca_${pet?.id ?? "novo"}_${tutorId}`} hint="Opcional.">
-        <input
-          id={`pet_raca_${pet?.id ?? "novo"}_${tutorId}`}
+      <FormField
+        label="Tipo de pet"
+        htmlFor={`pet_especie_${pet?.id ?? "novo"}_${tutorId}`}
+        hint="Ajuda a sugerir as raças mais comuns."
+      >
+        <select
+          id={`pet_especie_${pet?.id ?? "novo"}_${tutorId}`}
           className={inputClass}
-          value={raca}
-          onChange={(e) => setRaca(e.target.value)}
+          value={especie}
+          onChange={(e) => {
+            // Trocar de espécie invalida a raça escolhida antes — uma raça
+            // de cachorro não faz sentido depois de mudar pra gato.
+            setEspecie(e.target.value as EspeciePet | "");
+            setRaca(null);
+          }}
+        >
+          <option value="">Não informado</option>
+          <option value="cachorro">Cachorro</option>
+          <option value="gato">Gato</option>
+          <option value="outro">Outro</option>
+        </select>
+      </FormField>
+      <FormField label="Raça" htmlFor={`pet_raca_${pet?.id ?? "novo"}_${tutorId}`} hint="Opcional.">
+        <CampoRaca
+          id={`pet_raca_${pet?.id ?? "novo"}_${tutorId}`}
+          especie={especie || null}
+          raca={raca}
+          onChange={setRaca}
         />
       </FormField>
       <FormField
@@ -643,7 +831,7 @@ function PetForm({
           disabled={pending}
           className={botao({ tamanho: "sm" })}
         >
-          {pending ? "Salvando…" : pet ? "Salvar" : "Adicionar pet"}
+          {pending ? "Salvando…" : labelSubmit ?? (pet ? "Salvar" : "Adicionar pet")}
         </button>
         {onCancel && (
           <button
@@ -708,7 +896,10 @@ function PetRow({
     <div className="rounded-lg border border-surface-border px-3 py-2">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-ink-900">{pet.nome}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium text-ink-900">{pet.nome}</p>
+            {!pet.ativo && <Badge tom="neutro">Inativo</Badge>}
+          </div>
           <p className="text-xs text-ink-500">
             {porte?.nome ?? "porte não definido"}
             {pet.raca ? ` · ${pet.raca}` : ""}
@@ -740,13 +931,13 @@ function PetRow({
             onClick={() =>
               startTransition(async () => {
                 setErro("");
-                const resultado = await removerPet(pet.id);
+                const resultado = await alternarAtivoPet(pet.id, !pet.ativo);
                 if (!resultado.ok) setErro(resultado.erro);
               })
             }
-            className={botao({ variante: "textoPerigo", tamanho: "sm" })}
+            className={botao({ variante: pet.ativo ? "textoPerigo" : "texto", tamanho: "sm" })}
           >
-            Remover
+            {pet.ativo ? "Desativar" : "Reativar"}
           </button>
         </div>
       </div>

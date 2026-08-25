@@ -2,3 +2,6 @@
 # de URL (https://esm.sh/...) e globals (Deno.*) que o eslint/tsc do
 # projeto nao reconhecem. Ver supabase/functions/enviar-lembretes.
 supabase/functions/
+
+# Arquivos aposentados por refatoracao, guardados so pra conferencia manual.
+_to_delete/

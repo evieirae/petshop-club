@@ -2,7 +2,7 @@
 
 import { botao } from "@/lib/ui/styles";
 import { useEffect, useState, useTransition } from "react";
-import type { CategoriaServico, Pet, PrecoServico, Servico } from "@/types/database";
+import type { CategoriaServico, FormaPagamento, Pet, PrecoServico, Servico } from "@/types/database";
 import { FormField, inputClass } from "@/components/ui/FormField";
 import { agendarEPagar, buscarHorariosDisponiveis, type HorarioDisponivel } from "./actions";
 
@@ -32,13 +32,22 @@ function arredondar(valor: number): number {
 // 5): esta função roda no browser do tutor, a outra roda numa Edge Function
 // Deno — não dá pra compartilhar módulo entre os dois runtimes sem um passo
 // de build a mais, que não vale a pena pra uma conta desse tamanho.
+//
+// Migration 0011 — 'local' bypassa o gateway inteiro: sem comissão da
+// plataforma, sem taxa de cartão/Pix, o tutor paga só o preço do serviço
+// direto no petshop. Mesma regra de trg_agendamento_processar_cobranca no
+// banco — se este cálculo divergir de lá, é bug aqui, não lá.
 function calcularComposicaoPreco(
   valorServico: number,
   percentualPlataforma: number,
-  meio: "cartao" | "pix",
+  meio: FormaPagamento,
   taxaCartaoPercentual: number,
   taxaCartaoFixo: number
 ): { taxaPlataforma: number; taxaGateway: number; valorTotal: number } {
+  if (meio === "local") {
+    return { taxaPlataforma: 0, taxaGateway: 0, valorTotal: valorServico };
+  }
+
   const taxaPlataforma = arredondar(valorServico * percentualPlataforma);
   const base = valorServico + taxaPlataforma;
 
@@ -70,7 +79,7 @@ export function AgendarForm({
   precos: PrecoServico[];
   categorias: CategoriaServico[];
   percentualPlataforma: number;
-  formaPagamentoPreferida: "cartao" | "pix";
+  formaPagamentoPreferida: FormaPagamento;
   taxaCartaoPercentual: number;
   taxaCartaoFixo: number;
 }) {
@@ -163,9 +172,19 @@ export function AgendarForm({
       <div className="rounded-xl border border-success-100 bg-success-50 px-6 py-8 text-center">
         <p className="font-display text-lg text-ink-900">Visita agendada!</p>
         <p className="mt-2 text-sm text-ink-700">
-          Total cobrado: <span className="font-mono">{formatarPreco(resultado.valorTotal)}</span>.
-          A cobrança já foi gerada e está sendo processada — você recebe a
-          confirmação de pagamento por WhatsApp em instantes.
+          {formaPagamentoPreferida === "local" ? (
+            <>
+              Total combinado: <span className="font-mono">{formatarPreco(resultado.valorTotal)}</span>.
+              Sem cobrança pela plataforma — pague direto no petshop, na hora
+              da visita.
+            </>
+          ) : (
+            <>
+              Total cobrado: <span className="font-mono">{formatarPreco(resultado.valorTotal)}</span>.
+              A cobrança já foi gerada e está sendo processada — você recebe a
+              confirmação de pagamento por WhatsApp em instantes.
+            </>
+          )}
         </p>
       </div>
     );
@@ -246,23 +265,30 @@ export function AgendarForm({
               <span>Serviço</span>
               <span className="font-mono">{formatarPreco(precoSelecionado.preco)}</span>
             </div>
-            <div className="flex justify-between text-ink-500">
-              <span>
-                Taxa de serviço{" "}
-                {formaPagamentoPreferida === "pix" ? "(Pix)" : "(cartão)"}
-              </span>
-              <span className="font-mono">
-                {formatarPreco(composicao.taxaPlataforma + composicao.taxaGateway)}
-              </span>
-            </div>
+            {formaPagamentoPreferida === "local" ? (
+              <div className="flex justify-between text-ink-500">
+                <span>Taxa de serviço</span>
+                <span className="font-mono">Sem taxa (pagamento no local)</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-ink-500">
+                <span>
+                  Taxa de serviço{" "}
+                  {formaPagamentoPreferida === "pix" ? "(Pix)" : "(cartão)"}
+                </span>
+                <span className="font-mono">
+                  {formatarPreco(composicao.taxaPlataforma + composicao.taxaGateway)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-surface-border pt-1 font-medium text-ink-900">
               <span>Total</span>
               <span className="font-mono">{formatarPreco(composicao.valorTotal)}</span>
             </div>
             {formaPagamentoPreferida === "cartao" && (
               <p className="pt-1 text-xs text-ink-500">
-                Pagando via Pix a taxa de serviço fica menor — atualize sua
-                preferência de pagamento com o petshop.
+                Pagando via Pix ou no local a taxa de serviço fica menor —
+                atualize sua preferência de pagamento com o petshop.
               </p>
             )}
           </div>

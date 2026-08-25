@@ -32,9 +32,20 @@ export interface Petshop {
   horario_corte_confirmacao_tarde: string;
   horario_limite_petshop_tarde: string;
   falta_consome_visita_paga: boolean;
+  // Migration 0016 — comissão configurável. Percentuais em PONTO
+  // PERCENTUAL (5 = 5%), diferente de percentual_plataforma, que é fração.
+  // comissao_ativa=false (padrão) esconde o assunto na tela e zera qualquer
+  // cálculo. Cada funcionário pode sobrescrever esses padrões.
+  comissao_ativa: boolean;
+  comissao_percentual_venda: number;
+  comissao_percentual_servico: number;
   // Ver supabase/migrations/0004_intervalo_agendamento.sql — espaçamento
   // entre horários selecionáveis na agenda (lib/horarios.ts).
   intervalo_agendamento_minutos: number;
+  // Migration 0017 — congelamento/encerramento de conta pelo admin da
+  // plataforma. "ativo" (padrão) é o único status em que a equipe desse
+  // petshop consegue logar (ver app/(app)/layout.tsx).
+  status: "ativo" | "congelado" | "encerrado";
   criado_em: string;
 }
 
@@ -44,10 +55,34 @@ export interface UsuarioPetshop {
   auth_user_id: string;
   nome: string;
   papel: "dono" | "atendente";
-  // Ver supabase/migrations/0002_admin_plataforma.sql — true = enxerga/edita
-  // petshops de TODOS os petshops (taxas da plataforma), nao so o proprio.
-  // So marcado na mao via SQL Editor, sem UI de auto-promocao.
-  eh_admin_plataforma: boolean;
+  criado_em: string;
+}
+
+// Migration 0017 — admin da plataforma, identidade INDEPENDENTE de petshop
+// (ver lib/auth/getAdminContext.ts). Substitui
+// usuarios_petshop.eh_admin_plataforma. Só marcado na mão via SQL Editor,
+// sem UI de auto-promoção.
+export interface AdminPlataforma {
+  id: string;
+  auth_user_id: string;
+  nome: string;
+  criado_em: string;
+}
+
+// Migration 0018 — pedido de cotação vindo da Home pública (app/page.tsx).
+// Nunca cria petshop sozinho — conversão é manual, pelo admin
+// (app/(admin)/admin/leads).
+export type StatusLeadSaas = "novo" | "contatado" | "convertido" | "descartado";
+
+export interface LeadSaas {
+  id: string;
+  nome_petshop: string | null;
+  nome_responsavel: string | null;
+  email: string;
+  telefone: string | null;
+  mensagem: string | null;
+  status: StatusLeadSaas;
+  petshop_id: string | null;
   criado_em: string;
 }
 
@@ -102,6 +137,12 @@ export interface PlanoPreco {
   preco_assinatura: number;
 }
 
+// Migration 0011 — 'local' bypassa o gateway inteiro (pagamento presencial:
+// dinheiro, Pix pessoal, maquininha própria do petshop). Diferente de
+// 'cartao'/'pix', que passam pelo Asaas (Fase 6) com taxa de serviço somada
+// ao tutor, 'local' nunca tem taxa nenhuma — ver comentário da migration.
+export type FormaPagamento = "cartao" | "pix" | "local";
+
 // Tutores e pets (Fase 3 do roadmap — ver docs/regras_padrao_petshop.md secao 6).
 export interface Tutor {
   id: string;
@@ -116,9 +157,15 @@ export interface Tutor {
   // cpf/gateway_customer_id: o Asaas exige CPF pra criar um customer, e é
   // o customer que qualquer cobrança (cartão OU Pix) referencia — não só
   // cartão. Ambos nulos até a 1ª cobrança processada com sucesso.
-  forma_pagamento_preferida: "cartao" | "pix";
+  // Migration 0011 — 'local' é o bypass do gateway inteiro (pagamento
+  // presencial, sem taxa de serviço somada ao tutor). Ver FormaPagamento.
+  forma_pagamento_preferida: FormaPagamento;
   cpf: string | null;
   gateway_customer_id: string | null;
+  // Migration 0019 — soft-delete. false = tutor desativado (some das
+  // listas/pickers padrão, histórico intacto). Ver
+  // app/(app)/tutores/actions.ts, alternarAtivoTutor.
+  ativo: boolean;
   criado_em: string;
 }
 
@@ -136,6 +183,12 @@ export interface ContatoAdicional {
 
 export type SexoPet = "macho" | "femea";
 
+// Migration 0010 — null pros pets cadastrados antes dessa coluna existir
+// (mesmo padrão de sexo, 0008). "outro" cobre qualquer pet que não seja
+// cachorro/gato (ex.: pássaro, coelho, réptil) — pra esses (e pra null), a
+// raça é sempre texto livre, sem lista curada (ver lib/pets/racas.ts).
+export type EspeciePet = "cachorro" | "gato" | "outro";
+
 export interface Pet {
   id: string;
   petshop_id: string;
@@ -147,6 +200,15 @@ export interface Pet {
   // Migration 0008 — null pros pets cadastrados antes dessa coluna existir.
   // Usado pra concordância de gênero em mensagens automáticas.
   sexo: SexoPet | null;
+  // Migration 0010 — null pros pets cadastrados antes dessa coluna existir.
+  // Quando cachorro/gato, a UI sugere uma lista das raças mais comuns
+  // (CampoRaca/lib/pets/racas.ts); raca continua sendo o texto final salvo,
+  // sempre editável livremente independente do que foi selecionado aqui.
+  especie: EspeciePet | null;
+  // Migration 0019 — soft-delete, substitui a exclusão definitiva que
+  // existia antes. false = pet desativado (some das listas/pickers padrão,
+  // histórico intacto). Ver app/(app)/tutores/actions.ts, alternarAtivoPet.
+  ativo: boolean;
   criado_em: string;
 }
 
@@ -174,6 +236,11 @@ export interface Assinatura {
 export type StatusAgendamento =
   | "agendado"
   | "confirmado"
+  // Migration 0014 (18/ago/2026) — pet chegou, está no banho/tosa agora.
+  // Fica entre "confirmado" (ainda não chegou) e "pronto" (atendimento já
+  // terminou). Só o quadro de visitas do dia (Visão Geral) e a Agenda usam
+  // esse status; nada mais no schema lê/escreve nele.
+  | "presente"
   | "pronto"
   | "entregue"
   | "faltou"
@@ -197,6 +264,34 @@ export interface Agendamento {
   pronto_em: string | null;
   entregue_em: string | null;
   observacoes: string | null;
+  // Migration 0009 — repetição livre (recorrência sem plano). As três andam
+  // juntas: ou a visita faz parte de uma série, ou as três são null.
+  // Visita de assinatura NUNCA tem série (a recorrência vem do plano).
+  serie_id: string | null;
+  serie_intervalo_dias: number | null;
+  /** Quantas ocorrências ainda nascem DEPOIS desta. 0 = última da série. */
+  serie_restantes: number | null;
+  // Migration 0016 — quem executou o banho/tosa (base da comissão de
+  // serviço). Opcional: visita sem responsável simplesmente não gera
+  // comissão pra ninguém.
+  funcionario_id: string | null;
+  criado_em: string;
+}
+
+// Migration 0014 (18/ago/2026) — log append-only de toda mudança de status
+// em `agendamentos`, gerado sozinho por trg_agendamentos_status_evento (uma
+// linha por transição, inclusive reversões via voltar_status_agendamento()).
+// Existe pra dar métrica futura de "quanto tempo cada visita fica em cada
+// status" — nenhuma tela escreve aqui direto, e por enquanto nenhuma tela lê
+// direto também (fica pronto pra quando um relatório precisar).
+export type OrigemStatusEvento = "avanco" | "reversao" | "outro";
+
+export interface AgendamentoStatusEvento {
+  id: string;
+  petshop_id: string;
+  agendamento_id: string;
+  status: StatusAgendamento;
+  origem: OrigemStatusEvento;
   criado_em: string;
 }
 
@@ -234,8 +329,17 @@ interface CamposTaxaServico {
   valor_cobrado_tutor: number | null;
 }
 
+// Migration 0011 — como esta cobrança específica foi/vai ser paga. Nasce
+// copiada de tutores.forma_pagamento_preferida (trigger), mas o balcão pode
+// trocar por cobrança individual (Financeiro → "Marcar pago no local").
+// Null só em cobrança criada antes da 0011. Só em cobrancas/cobrancas_avulsas
+// — mensalidades_petshop não tem (quem paga ali é o petshop, não o tutor).
+interface CamposFormaPagamento {
+  forma_pagamento: FormaPagamento | null;
+}
+
 // Cobrança mensal proporcional de assinatura — 1 linha por mês por assinatura.
-export interface Cobranca extends CamposGatewayCobranca, CamposTaxaServico {
+export interface Cobranca extends CamposGatewayCobranca, CamposTaxaServico, CamposFormaPagamento {
   id: string;
   petshop_id: string;
   assinatura_id: string;
@@ -254,7 +358,7 @@ export interface Cobranca extends CamposGatewayCobranca, CamposTaxaServico {
 }
 
 // Cobrança de visita avulsa — 1 linha por visita (não por mês).
-export interface CobrancaAvulsa extends CamposGatewayCobranca, CamposTaxaServico {
+export interface CobrancaAvulsa extends CamposGatewayCobranca, CamposTaxaServico, CamposFormaPagamento {
   id: string;
   petshop_id: string;
   agendamento_id: string;
@@ -322,6 +426,10 @@ export type TipoLembrete =
   | "confirmacao_agendamento"
   | "confirmacao_manual_petshop"
   | "pet_pronto"
+  // Migration 0013 — agradecimento automático quando a equipe marca
+  // "entregue" (pelo quadro da Visão Geral ou pela Agenda). Mesmo desenho
+  // de pet_pronto: vai pro contato de papel='busca_entrega'.
+  | "pet_entregue"
   | "cadastro"
   | "cobranca_falhou"
   | "cartao_vencendo"
@@ -330,7 +438,14 @@ export type TipoLembrete =
   // de debitar o cartão; cadastro_cartao é o link de tokenização.
   | "cobranca_pix"
   | "aviso_cobranca"
-  | "cadastro_cartao";
+  | "cadastro_cartao"
+  // Migration 0020 — "chamar de volta" um pet sem visita há um tempo,
+  // disparado manualmente em app/(app)/pets/PetsSection.tsx. De propósito
+  // SEM gerador de mensagem ainda (é categoria MARKETING, pendente de
+  // template — ver comentário na migration): fica reservado no CHECK,
+  // mesma situação de cobranca_falhou/cartao_vencendo/aviso_cobranca/
+  // cadastro_cartao hoje.
+  | "retencao_cliente";
 
 export type DestinatarioLembrete = "tutor" | "petshop";
 
@@ -370,8 +485,8 @@ export interface Lembrete {
   entregue_em: string | null;
   lido_em: string | null;
   // Payload específico do tipo (ex.: cobranca_pix precisa de petNome/
-  // valorFormatado/pixCopiaCola) — migration 0007. Null pros tipos que não
-  // precisam.
+  // valorFormatado/pixCopiaCola — migration 0007; retencao_cliente precisa
+  // de petNome/dias — migration 0020). Null pros tipos que não precisam.
   dados_extra: Record<string, unknown> | null;
   criado_em: string;
 }
@@ -383,6 +498,114 @@ export interface JanelaWhatsApp {
   telefone: string;
   ultima_mensagem_recebida: string;
   atualizado_em: string;
+}
+
+// Produtos, estoque e vendas (Fase 3 do pedido de 18/ago/2026 — ver
+// supabase/migrations/0012_produtos_estoque_vendas.sql).
+export interface Produto {
+  id: string;
+  petshop_id: string;
+  nome: string;
+  categoria: string | null;
+  preco_venda: number;
+  custo: number | null;
+  // Cache decrementado só por registrar_venda() — reposição nesta fase é
+  // edição manual do campo pela tela de catálogo (sem log em
+  // movimentos_estoque ainda, ver comentário da migration).
+  estoque_atual: number;
+  estoque_minimo: number | null;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export type StatusVenda = "pendente" | "pago" | "cancelada";
+
+// tutor_id/agendamento_id opcionais de propósito — venda de balcão não
+// exige cliente cadastrado (decisão do Eduardo, 18/ago/2026).
+// forma_pagamento reaproveita o desenho da migration 0011: cartão/Pix pela
+// plataforma, 'local' sem taxa nenhuma.
+export interface Venda {
+  id: string;
+  petshop_id: string;
+  tutor_id: string | null;
+  agendamento_id: string | null;
+  forma_pagamento: FormaPagamento;
+  valor_total: number;
+  status: StatusVenda;
+  // Migration 0016 — vendedor e comissão. Os dois valores são SNAPSHOT do
+  // momento da venda: mudar o percentual padrão depois não reescreve
+  // comissão de venda antiga (mesmo espírito de venda_itens.preco_unitario).
+  funcionario_id: string | null;
+  comissao_percentual: number;
+  valor_comissao: number;
+  criado_em: string;
+}
+
+// Sem petshop_id direto — mesmo padrão de PlanoPreco/PlanoServico/PrecoServico.
+// preco_unitario é o snapshot de produtos.preco_venda no momento da venda.
+export interface VendaItem {
+  id: string;
+  venda_id: string;
+  produto_id: string;
+  quantidade: number;
+  preco_unitario: number;
+  subtotal: number;
+}
+
+export type TipoMovimentoEstoque = "entrada" | "saida" | "ajuste";
+
+// Log de toda entrada/saída/ajuste de estoque — só ganha linhas automáticas
+// de registrar_venda() nesta fase (tipo='saida', motivo='venda').
+export interface MovimentoEstoque {
+  id: string;
+  petshop_id: string;
+  produto_id: string;
+  tipo: TipoMovimentoEstoque;
+  quantidade: number;
+  motivo: string | null;
+  venda_id: string | null;
+  criado_em: string;
+}
+
+// Migration 0016 — equipe do petshop pra atendimento e comissão. NÃO é
+// login: quem acessa o sistema continua em UsuarioPetshop. Um funcionário
+// pode existir aqui sem nunca ter conta no Supabase Auth (decisão do
+// Eduardo, 20/ago/2026).
+export type FuncaoFuncionario =
+  | "tosador"
+  | "banhista"
+  | "atendente"
+  | "vendedor"
+  | "veterinario"
+  | "outro";
+
+export interface Funcionario {
+  id: string;
+  petshop_id: string;
+  nome: string;
+  funcao: FuncaoFuncionario;
+  telefone: string | null;
+  ativo: boolean;
+  // null = herda o padrão do petshop (petshops.comissao_percentual_*).
+  // 0 = "esse funcionário não ganha comissão nisso" — coisas diferentes,
+  // por isso nullable em vez de default 0.
+  comissao_percentual_venda: number | null;
+  comissao_percentual_servico: number | null;
+  criado_em: string;
+}
+
+// Retorno de resumo_comissoes(petshop, inicio, fim) — ver migration 0016.
+export interface ResumoComissao {
+  funcionario_id: string;
+  funcionario_nome: string;
+  funcionario_funcao: FuncaoFuncionario;
+  qtd_vendas: number;
+  total_vendas: number;
+  comissao_vendas: number;
+  qtd_servicos: number;
+  total_servicos: number;
+  comissao_servicos: number;
+  comissao_total: number;
 }
 
 // Placeholder generico — mantem os clientes tipaveis sem travar em tudo

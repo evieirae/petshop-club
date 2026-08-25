@@ -6,6 +6,7 @@ import type {
   Agendamento,
   Assinatura,
   CategoriaServico,
+  Funcionario,
   Pet,
   Plano,
   Servico,
@@ -58,6 +59,7 @@ export default async function AgendaPage({
     { data: assinaturas },
     { data: agendamentosAvulsosTodos },
     { data: lembretesEscalados },
+    { data: funcionarios },
   ] = await Promise.all([
     supabase
       .from("agendamentos")
@@ -81,14 +83,26 @@ export default async function AgendaPage({
       .select("agendamento_id")
       .eq("tipo", "confirmacao_manual_petshop")
       .not("agendamento_id", "is", null),
+    // Migration 0016 — quem pode ser marcado como responsável pela visita.
+    // Só ativos: quem saiu do petshop continua nas visitas antigas, mas não
+    // entra em visita nova.
+    supabase
+      .from("funcionarios")
+      .select("*")
+      .eq("petshop_id", petshopId)
+      .eq("ativo", true)
+      .order("nome"),
   ]);
 
   const tutorIdsComAssinatura = new Set((assinaturas ?? []).map((a) => a.tutor_id));
   const tutorIdsComAvulso = new Set(
     (agendamentosAvulsosTodos ?? []).map((a) => a.tutor_id).filter(Boolean) as string[]
   );
+  // Migration 0019 (soft-delete) — tutor desativado não entra nesse
+  // atalho de "candidato a contato": ele já não é mais atendido, então não
+  // faz sentido convidar a equipe a agendar a primeira visita dele.
   const tutoresSemAgendamento = (tutores as Tutor[] | null ?? []).filter(
-    (t) => !tutorIdsComAssinatura.has(t.id) && !tutorIdsComAvulso.has(t.id)
+    (t) => t.ativo && !tutorIdsComAssinatura.has(t.id) && !tutorIdsComAvulso.has(t.id)
   );
 
   // Confirmações escaladas pro petshop (Fase 5) que ainda não foram
@@ -132,6 +146,7 @@ export default async function AgendaPage({
           assinaturas={(assinaturas as Assinatura[]) ?? []}
           tutoresSemAgendamento={tutoresSemAgendamento}
           pendenciasConfirmacao={pendenciasConfirmacao}
+          funcionarios={(funcionarios as Funcionario[]) ?? []}
         />
       </div>
     </div>

@@ -89,6 +89,25 @@ export const palette = {
   },
 
   /**
+   * ROXO — em andamento, mão na massa.
+   * Também não estava no briefing (18/ago/2026): o quadro de visitas do dia
+   * da Visão Geral ganhou o status "Presente" (pet chegou, está no banho/
+   * tosa AGORA), que precisava de uma cor própria — reaproveitar `info`
+   * (azul, já usado por "pronto p/ busca") ou `atencao` (amarelo, já usado
+   * por "reagendado" no mesmo mapa de status de agendamento) criaria duas
+   * cores iguais pra dois status diferentes na mesma tela, o que quebra a
+   * regra de "uma cor = um significado". Roxo fica longe o bastante de
+   * azul/verde/amarelo/vermelho pra ser reconhecível de relance.
+   */
+  progress: {
+    50: "#FAF5FF",
+    100: "#E9D8FD",
+    500: "#805AD5",
+    600: "#6B46C1",
+    700: "#553C9A", // texto roxo: 8,0:1 no branco, 7,8:1 sobre progress.50
+  },
+
+  /**
    * TEXTO — cinza-azulado, para casar com o azul da marca.
    * ink.500 é o tom mais usado do app (texto auxiliar). Ficou em #4A5568
    * (7.2:1) e não no cinza médio óbvio #718096, que dá 3.9:1 e reprova AA.

@@ -1,6 +1,7 @@
 "use client";
 
 import { Logo } from "@/components/brand/Logo";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -32,13 +33,16 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    router.push("/painel");
     router.refresh();
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
+        <Link href="/" className="mb-4 inline-block text-sm font-medium text-ink-500 hover:text-ink-700">
+          ← Voltar
+        </Link>
         <div className="mb-8 flex justify-center">
           <Logo tamanho="lg" />
         </div>

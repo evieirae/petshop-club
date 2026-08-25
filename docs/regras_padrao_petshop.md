@@ -91,16 +91,24 @@ mensagem que a gente inicia) — texto, parâmetros e regras de aprovação em
 > Pix continua sendo o meio mais barato pro tutor, porque só carrega a
 > parte da plataforma, nunca a do gateway.
 
-> **Quem edita isso**: só a administração da plataforma (`usuarios_petshop.eh_admin_plataforma = true`),
-> pela tela `/admin` — nunca o petshop parceiro. É a receita da plataforma,
+> **Quem edita isso**: só a administração da plataforma (uma linha em
+> `admins_plataforma`, identidade independente de qualquer petshop — ver
+> `supabase/migrations/0017_admin_plataforma_independente.sql`), pela tela
+> `/admin/petshops` — nunca o petshop parceiro. É a receita da plataforma,
 > não um parâmetro operacional do petshop. O petshop só visualiza os
 > próprios valores em Configurações (fica claro ali que é "só consulta").
 > Reforçado em dois níveis (não é só a tela que esconde o campo): a RLS de
 > `petshops` e um trigger `BEFORE UPDATE` rejeitam qualquer alteração
-> dessas 3 colunas por quem não tem a flag, mesmo via chamada direta à API
-> do Supabase — ver `supabase/migrations/0002_admin_plataforma.sql`. Não
-> existe UI de auto-promoção a admin; a flag só é marcada na mão via SQL
-> Editor.
+> dessas 3 colunas por quem não tem essa linha em `admins_plataforma`, mesmo
+> via chamada direta à API do Supabase — ver
+> `supabase/migrations/0002_admin_plataforma.sql`. Não existe UI de
+> auto-promoção a admin; a linha só é criada na mão via SQL Editor.
+>
+> **Congelamento/encerramento de conta** (`petshops.status`, mesma
+> migration 0017): mesma proteção de dois níveis das 3 colunas de taxa.
+> `status != 'ativo'` bloqueia o login de toda a equipe desse petshop
+> (`app/(app)/layout.tsx`) — não afeta um login que também seja admin da
+> plataforma, que continua acessando `/admin` normalmente.
 
 ## 4. Planos (por plano, não por petshop)
 
@@ -190,12 +198,28 @@ pro próprio tutor preencher.
   pra equipe ver de relance quem ainda está com cadastro pendente.
 - O link pode ser reenviado a qualquer momento (não é uma ação única) — útil
   se o tutor mudar de endereço ou telefone.
+- **Tutor/pet que não é mais atendido não é excluído, é desativado**
+  (`tutores.ativo`/`pets.ativo`, `supabase/migrations/0019_tutores_pets_ativo.sql`)
+  — some das listas e dos pickers de agendamento/venda NOVOS, mas o
+  histórico (agendamentos, vendas, cobranças) continua intacto, e dá pra
+  reativar a qualquer momento. Mesmo padrão já usado em
+  `funcionarios.ativo`/`produtos.ativo`.
 
 ## 7. Checklist de onboarding de um petshop novo
 
 Na prática, colocar um petshop parceiro novo no ar é preencher esta lista:
 
-1. Cadastrar a linha em `petshops` (nome, CNPJ, telefone, endereço).
+> **De onde vem o pedido**: a Home pública (`app/page.tsx`) tem um
+> formulário de cotação que grava um pedido de interesse em `leads_saas`
+> (`supabase/migrations/0018_leads_saas.sql`) — isso NUNCA cria petshop
+> sozinho. O passo 1 abaixo (criar a linha em `petshops` + o login do dono)
+> é sempre manual, feito pelo admin da plataforma em `/admin/petshops`
+> ("+ Novo petshop") ou, a partir de um lead específico, em `/admin/leads`
+> ("Converter em petshop") — os dois caminhos levam ao mesmo formulário.
+
+1. Cadastrar a linha em `petshops` e o login do dono (`/admin/petshops`,
+   nome, CNPJ, telefone, endereço — CNPJ/telefone/endereço ainda entram
+   direto no SQL Editor por enquanto, só nome + dono têm tela).
 2. Confirmar ou ajustar expediente e intervalo (seção 1) — os padrões
    (09h–18h, sem pausa) servem de ponto de partida, mas vale confirmar com
    o dono.
