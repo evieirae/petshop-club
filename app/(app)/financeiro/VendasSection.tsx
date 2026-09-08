@@ -47,12 +47,20 @@ const LABEL_STATUS_VENDA: Record<StatusVenda, string> = {
   pendente: "Aguardando Pix",
   pago: "Pago",
   cancelada: "Cancelada",
+  // Migration 0026 — reserva do portal do tutor.
+  reservada: "Reservada",
+  expirada: "Reserva expirada",
 };
 
 const TOM_STATUS_VENDA: Record<StatusVenda, TomBadge> = {
   pendente: "atencao",
   pago: "sucesso",
   cancelada: "erro",
+  // Amarelo: tem alguém esperando uma ação do balcão (entregar o produto).
+  reservada: "atencao",
+  // Cinza: o prazo passou e o estoque já voltou sozinho — não é falha de
+  // ninguém, é o fluxo funcionando.
+  expirada: "neutro",
 };
 
 function formatarPreco(valor: number): string {

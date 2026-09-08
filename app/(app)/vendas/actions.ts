@@ -161,3 +161,60 @@ export async function consultarStatusVenda(vendaId: string): Promise<{ status: s
   const { data } = await supabase.from("vendas").select("status").eq("id", vendaId).maybeSingle();
   return data ? { status: data.status as string } : null;
 }
+
+// ----------------------------------------------------------------------------
+// RESERVAS DA LOJINHA (migration 0026)
+//
+// As duas usam o client COMUM, não service role: `concluir_reserva()` e
+// `cancelar_reserva()` não são SECURITY DEFINER, então rodam com a sessão de
+// quem chamou e a RLS de sempre continua valendo — id de reserva de outro
+// petshop simplesmente não encontra linha e a função devolve "Reserva não
+// encontrada". É o padrão do projeto: a segurança vem da RLS, não de
+// checagem manual no TypeScript.
+// ----------------------------------------------------------------------------
+
+/** Tutor apareceu e levou: vira venda paga e o estoque sai de verdade. */
+export async function concluirReserva(
+  vendaId: string,
+  formaPagamento: FormaPagamento = "local"
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const supabase = createClient();
+
+  const { error } = await supabase.rpc("concluir_reserva", {
+    p_venda_id: vendaId,
+    p_forma_pagamento: formaPagamento,
+  });
+
+  if (error) {
+    console.error("Erro ao concluir reserva:", error);
+    return {
+      ok: false,
+      erro: error.message.includes("nao encontrada")
+        ? "Essa reserva já foi resolvida por outra pessoa. Atualize a página."
+        : ERRO_GENERICO,
+    };
+  }
+
+  revalidatePath("/vendas");
+  revalidatePath("/financeiro");
+  revalidatePath("/catalogo");
+  return { ok: true };
+}
+
+/** Libera o estoque sem esperar o prazo — desistência ou necessidade da loja. */
+export async function cancelarReserva(
+  vendaId: string
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const supabase = createClient();
+
+  const { error } = await supabase.rpc("cancelar_reserva", { p_venda_id: vendaId });
+
+  if (error) {
+    console.error("Erro ao cancelar reserva:", error);
+    return { ok: false, erro: ERRO_GENERICO };
+  }
+
+  revalidatePath("/vendas");
+  revalidatePath("/catalogo");
+  return { ok: true };
+}

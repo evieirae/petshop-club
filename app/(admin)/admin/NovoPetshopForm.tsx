@@ -5,11 +5,11 @@ import { botao, superficie } from "@/lib/ui/styles";
 import { FormField, inputClass } from "@/components/ui/FormField";
 import { criarPetshopComDono } from "./actions";
 
-// Não existe envio de e-mail configurado no projeto ainda — a senha
-// temporária aparece na tela UMA vez pro admin copiar e mandar manualmente
-// (WhatsApp/e-mail), mesmo padrão já usado pro link de cadastro do tutor
-// (app/(app)/tutores/actions.ts, gerarLinkCadastro). O dono troca a senha
-// depois de logar, se quiser.
+// A senha temporária aparece na tela UMA vez pro admin copiar, mesmo sem
+// RESEND_API_KEY configurada (ver .env.example) — é o fallback de sempre.
+// Com o Resend configurado, o mesmo e-mail com a senha já sai
+// automaticamente pro dono (lib/email/, criarPetshopComDono em ./actions.ts);
+// resposta.emailEnviado diz se esse envio funcionou.
 export function NovoPetshopForm({
   leadId,
   nomePetshopInicial = "",
@@ -30,7 +30,7 @@ export function NovoPetshopForm({
   const [emailDono, setEmailDono] = useState(emailDonoInicial);
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
-  const [resultado, setResultado] = useState<{ senha: string } | null>(null);
+  const [resultado, setResultado] = useState<{ senha: string; emailEnviado: boolean } | null>(null);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -49,7 +49,7 @@ export function NovoPetshopForm({
         leadId,
       });
       if (resposta.ok) {
-        setResultado({ senha: resposta.senhaTemporaria });
+        setResultado({ senha: resposta.senhaTemporaria, emailEnviado: resposta.emailEnviado });
         onCriado?.();
       } else {
         setErro(resposta.erro);
@@ -68,9 +68,15 @@ export function NovoPetshopForm({
           {resultado.senha}
         </p>
         <p className="mt-2 text-xs text-ink-500">
-          Mande essa senha e o e-mail de login ({emailDono}) pro dono por
-          WhatsApp ou e-mail, manualmente. Ele consegue trocar a senha depois
-          de entrar.
+          {resultado.emailEnviado ? (
+            <>Também mandamos um e-mail pra {emailDono} com essa senha e o link de login.</>
+          ) : (
+            <>
+              Não deu pra mandar e-mail automático — mande essa senha e o
+              login ({emailDono}) pro dono manualmente. Ele consegue trocar a
+              senha depois de entrar.
+            </>
+          )}
         </p>
         <div className="mt-4">
           <button type="button" onClick={onCancel} className={botao({ tamanho: "sm" })}>

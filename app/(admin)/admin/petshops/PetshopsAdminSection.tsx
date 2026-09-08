@@ -1,13 +1,18 @@
 "use client";
 
-import { botao } from "@/lib/ui/styles";
-import { useState, useTransition, type FormEvent } from "react";
-import type { Petshop } from "@/types/database";
+import Link from "next/link";
+import { botao, superficie } from "@/lib/ui/styles";
+import { useMemo, useState, useTransition, type FormEvent } from "react";
+import type { Petshop, UsuarioPetshop } from "@/types/database";
 import type { TomBadge } from "@/lib/ui/styles";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField, inputClass } from "@/components/ui/FormField";
-import { atualizarStatusPetshop, atualizarTaxasPlataforma } from "../actions";
+import {
+  atualizarStatusPetshop,
+  atualizarTaxasPlataforma,
+  resetarSenhaUsuarioPetshop,
+} from "../actions";
 import { NovoPetshopForm } from "../NovoPetshopForm";
 
 // 0.03 (fracao, como fica em petshops.percentual_plataforma) <-> "3" (%, o
@@ -29,8 +34,29 @@ const STATUS_TOM: Record<Petshop["status"], TomBadge> = {
   encerrado: "erro",
 };
 
-export function PetshopsAdminSection({ petshops }: { petshops: Petshop[] }) {
+export function PetshopsAdminSection({
+  petshops,
+  usuarios,
+}: {
+  petshops: Petshop[];
+  usuarios: UsuarioPetshop[];
+}) {
   const [criandoPetshop, setCriandoPetshop] = useState(false);
+
+  // Equipe agrupada por petshop, dono sempre antes de atendente — é quem a
+  // administração mais provavelmente vai precisar resetar primeiro.
+  const usuariosPorPetshop = useMemo(() => {
+    const mapa = new Map<string, UsuarioPetshop[]>();
+    usuarios.forEach((usuario) => {
+      const lista = mapa.get(usuario.petshop_id) ?? [];
+      lista.push(usuario);
+      mapa.set(usuario.petshop_id, lista);
+    });
+    mapa.forEach((lista) =>
+      lista.sort((a, b) => (a.papel === b.papel ? 0 : a.papel === "dono" ? -1 : 1))
+    );
+    return mapa;
+  }, [usuarios]);
 
   return (
     <section>
@@ -61,17 +87,29 @@ export function PetshopsAdminSection({ petshops }: { petshops: Petshop[] }) {
             descricao="Use “+ Novo petshop” acima, ou converta um lead em /admin/leads."
           />
         ) : (
-          petshops.map((petshop) => <PetshopCard key={petshop.id} petshop={petshop} />)
+          petshops.map((petshop) => (
+            <PetshopCard
+              key={petshop.id}
+              petshop={petshop}
+              usuarios={usuariosPorPetshop.get(petshop.id) ?? []}
+            />
+          ))
         )}
       </div>
     </section>
   );
 }
 
-function PetshopCard({ petshop }: { petshop: Petshop }) {
+type SenhaRevelada = { nome: string; email: string; senha: string; emailEnviado: boolean };
+
+function PetshopCard({ petshop, usuarios }: { petshop: Petshop; usuarios: UsuarioPetshop[] }) {
   const [editando, setEditando] = useState(false);
   const [pending, startTransition] = useTransition();
   const [erroStatus, setErroStatus] = useState("");
+
+  const [pendingSenha, startTransitionSenha] = useTransition();
+  const [erroSenha, setErroSenha] = useState("");
+  const [revelada, setRevelada] = useState<SenhaRevelada | null>(null);
 
   if (editando) {
     return (
@@ -90,12 +128,34 @@ function PetshopCard({ petshop }: { petshop: Petshop }) {
     });
   }
 
+  function resetarSenha(usuarioId: string) {
+    setErroSenha("");
+    startTransitionSenha(async () => {
+      const resposta = await resetarSenhaUsuarioPetshop(usuarioId);
+      if (resposta.ok) {
+        setRevelada({
+          nome: resposta.nome,
+          email: resposta.email,
+          senha: resposta.senha,
+          emailEnviado: resposta.emailEnviado,
+        });
+      } else {
+        setErroSenha(resposta.erro);
+      }
+    });
+  }
+
   return (
     <div className="rounded-xl border border-surface-border bg-surface-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-medium text-ink-900">{petshop.nome}</p>
+            <Link
+              href={`/admin/petshops/${petshop.id}`}
+              className="font-medium text-ink-900 hover:text-brand-700 hover:underline"
+            >
+              {petshop.nome}
+            </Link>
             <Badge tom={STATUS_TOM[petshop.status]}>{STATUS_LABEL[petshop.status]}</Badge>
           </div>
           <p className="mt-0.5 text-xs text-ink-500">
@@ -113,6 +173,12 @@ function PetshopCard({ petshop }: { petshop: Petshop }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/admin/petshops/${petshop.id}`}
+            className={botao({ variante: "neutra", tamanho: "sm" })}
+          >
+            Configurações
+          </Link>
           <button
             type="button"
             onClick={() => setEditando(true)}
@@ -156,6 +222,68 @@ function PetshopCard({ petshop }: { petshop: Petshop }) {
         <p role="alert" className="mt-2 text-sm text-danger-600">
           {erroStatus}
         </p>
+      )}
+
+      {usuarios.length > 0 && (
+        <div className="mt-4 border-t border-surface-border pt-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-500">
+            Equipe com acesso
+          </p>
+          <div className="mt-2 space-y-2">
+            {usuarios.map((usuario) => (
+              <div key={usuario.id} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-ink-900">
+                  {usuario.nome}{" "}
+                  <span className="text-xs text-ink-500">
+                    ({usuario.papel === "dono" ? "dono" : "atendente"})
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => resetarSenha(usuario.id)}
+                  disabled={pendingSenha}
+                  className={botao({ variante: "texto", tamanho: "sm" })}
+                >
+                  Nova senha
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {erroSenha && (
+            <p role="alert" className="mt-2 text-sm text-danger-600">
+              {erroSenha}
+            </p>
+          )}
+
+          {revelada && (
+            <div className={`mt-3 ${superficie.blocoEdicao}`}>
+              <p className="text-sm font-medium text-ink-900">
+                Senha de {revelada.nome} redefinida. Anote agora — ela só aparece uma vez:
+              </p>
+              <p className="mt-3 select-all rounded-lg border border-brand-200 bg-surface-card px-4 py-3 text-center font-mono text-lg tracking-wide text-ink-900">
+                {revelada.senha}
+              </p>
+              <p className="mt-2 text-xs text-ink-500">
+                Login: <span className="font-mono">{revelada.email}</span>
+              </p>
+              <p className="mt-1 text-xs text-ink-500">
+                {revelada.emailEnviado
+                  ? "Também mandamos um e-mail com essa senha pra essa conta."
+                  : "Não deu pra mandar e-mail automático — avise a pessoa manualmente."}
+              </p>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setRevelada(null)}
+                  className={botao({ tamanho: "sm" })}
+                >
+                  Concluir
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -31,7 +31,19 @@ const TAMANHO_TEXTO = {
 
 export type TamanhoLogo = keyof typeof TAMANHO_SIMBOLO;
 
-export function LogoSimbolo({ className }: { className?: string }) {
+export function LogoSimbolo({
+  className,
+  miolo = "fill-surface-card",
+}: {
+  className?: string;
+  /**
+   * Classe de preenchimento da patinha. O padrão (branco) vale sobre o
+   * círculo azul; sobre fundo escuro o círculo vira branco e a patinha
+   * precisa virar azul, senão ela some — é o que petclub-logo-branco.svg
+   * já fazia e a versão React não fazia.
+   */
+  miolo?: string;
+}) {
   return (
     <svg
       viewBox="0 0 100 100"
@@ -41,7 +53,7 @@ export function LogoSimbolo({ className }: { className?: string }) {
     >
       {/* O círculo usa currentColor — quem chama define a cor pelo texto. */}
       <circle cx="50" cy="50" r="50" fill="currentColor" />
-      <g className="fill-surface-card">
+      <g className={miolo}>
         <ellipse cx="24.5" cy="41" rx="7.6" ry="10" transform="rotate(-24 24.5 41)" />
         <ellipse cx="40.3" cy="29.5" rx="7.6" ry="11" transform="rotate(-8 40.3 29.5)" />
         <ellipse cx="59.7" cy="29.5" rx="7.6" ry="11" transform="rotate(8 59.7 29.5)" />
@@ -65,6 +77,7 @@ export function Logo({
   className?: string;
 }) {
   const corSimbolo = tom === "branco" ? "text-surface-card" : "text-brand-500";
+  const corMiolo = tom === "branco" ? "fill-brand-500" : "fill-surface-card";
 
   if (variante === "simbolo") {
     return (
@@ -73,7 +86,7 @@ export function Logo({
         role="img"
         aria-label="PetClub"
       >
-        <LogoSimbolo className={TAMANHO_SIMBOLO[tamanho]} />
+        <LogoSimbolo className={TAMANHO_SIMBOLO[tamanho]} miolo={corMiolo} />
       </span>
     );
   }
@@ -85,7 +98,7 @@ export function Logo({
       aria-label="PetClub"
     >
       <span className={corSimbolo}>
-        <LogoSimbolo className={TAMANHO_SIMBOLO[tamanho]} />
+        <LogoSimbolo className={TAMANHO_SIMBOLO[tamanho]} miolo={corMiolo} />
       </span>
       <span
         aria-hidden="true"

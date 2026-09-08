@@ -155,7 +155,7 @@ export function PetsSection({
           <select
             id="pets_filtro_especie"
             className={inputClass}
-            value={especieFiltro}
+            value={especieFiltro ?? "todas"}
             onChange={(e) => setEspecieFiltro(e.target.value as Pet["especie"] | "todas")}
           >
             <option value="todas">Todas</option>

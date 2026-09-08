@@ -41,6 +41,8 @@ export function formatarHorario(iso: string): string {
 export const TERMINAIS: StatusAgendamento[] = ["entregue", "faltou", "cancelado"];
 
 export const LABEL_STATUS: Record<StatusAgendamento, string> = {
+  // Migration 0025 — pedido do tutor pelo portal, esperando resposta.
+  solicitado: "Pedido do tutor",
   agendado: "Agendado",
   confirmado: "Confirmado",
   // Migration 0014 — pet chegou, está no banho/tosa agora.
@@ -50,11 +52,15 @@ export const LABEL_STATUS: Record<StatusAgendamento, string> = {
   faltou: "Faltou",
   reagendado: "Reagendado",
   cancelado: "Cancelado",
+  recusado: "Recusado",
 };
 
 // Os tons saem de lib/ui/styles.ts — o mesmo verde de "confirmado" aqui e de
 // "pago" no financeiro. Amarelo = precisa de uma ação do balcão.
 export const TOM_STATUS: Record<StatusAgendamento, TomBadge> = {
+  // Amarelo porque é exatamente o que o amarelo significa aqui: tem alguém
+  // esperando uma ação do balcão.
+  solicitado: "atencao",
   agendado: "neutro",
   confirmado: "sucesso",
   presente: "progresso",
@@ -63,6 +69,9 @@ export const TOM_STATUS: Record<StatusAgendamento, TomBadge> = {
   faltou: "erro",
   reagendado: "atencao",
   cancelado: "neutro",
+  // Cinza, não vermelho: recusar é uma escolha do petshop, não uma falha —
+  // mesma lógica que já tinha movido "inativo" pro cinza no design system.
+  recusado: "neutro",
 };
 
 // ----------------------------------------------------------------------------

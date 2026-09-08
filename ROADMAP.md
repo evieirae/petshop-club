@@ -214,7 +214,57 @@ Nada disso é schema, então nada disso está em migration:
   Petshop com número próprio precisaria de credencial por petshop — cabe na
   Fase 7 se algum parceiro exigir.
 
-## Fase 6 — Cobrança com gateway de pagamento real
+## Fase 6 — Cobrança com gateway de pagamento real → **ADIADA PARA A v2**
+
+> **Decisão de 30/ago/2026 (Eduardo): a Fase 6 sai da v1.**
+>
+> A escolha do meio de pagamento virou uma decisão de negócio complexa
+> demais pra ser tomada agora, e ela não bloqueia mais nada. O caminho
+> `pagamento_local` (migration 0011) passa a ser o único da v1 — e ele já
+> está inteiro construído: a migration, a função `marcar_pagamento_local()`,
+> o `PagamentoLocalBotao.tsx` e a tela `/financeiro`. Adiar não deixa
+> buraco.
+>
+> **O que sai da v1:** conta em gateway, subconta por petshop, split,
+> tokenização de cartão, PCI, CPF obrigatório do tutor, webhook de gateway,
+> Pix síncrono no portal do tutor (o antigo gap #3), e as Edge Functions
+> `processar-cobrancas`, `gateway-webhook` e `criar-pix-venda` — que ficam
+> no repositório sem deploy, dormindo até a v2.
+>
+> **O que isso faz com a receita:** a `0011` zera `valor_percentual` quando
+> a forma é local ("a plataforma não cobra comissão numa cobrança que ela
+> não processou"). Então a receita da v1 é **só o fee fixo de R$ 99 por
+> petshop** — os 3% voltam junto com o gateway, na v2.
+>
+> **E isso é coerente com o posicionamento**, não uma perda: o próprio
+> motivo de descartar a cobrança consolidada foi não parecer sócio do
+> parceiro. Um SaaS de mensalidade fixa é exatamente "prestador de serviço".
+> A comissão de 3% era justamente a parte que parecia sociedade.
+>
+> **Números da v1** (petshop médio, WhatsApp otimizado a R$ 32,65 — sem o
+> template `cobranca_pix`, que não existe sem gateway):
+>
+> | | v1 sem gateway | v2 com gateway |
+> |---|---|---|
+> | Receita por petshop | R$ 99,00 | R$ 459,00 |
+> | Custo variável por petshop | R$ 32,65 | R$ 35,35 |
+> | Margem por petshop | R$ 66,35 | R$ 423,65 |
+> | Break-even (com Supabase Pro) | **3,5 petshops** | 1,0 |
+> | Teto do MEI | **68 petshops** | 15 |
+>
+> O teto do MEI sair de 15 para 68 petshops é o ganho colateral mais útil:
+> a migração para ME deixa de ser uma preocupação do primeiro ano.
+>
+> **Estudos preservados para quando a v2 chegar:**
+> `docs/fase6_pagamentos.md` (plano original, Asaas),
+> `docs/plano-troca-gateway-mercadopago.md` (o que mudaria no código),
+> `docs/fatia0-mercadopago.md` (o que a documentação do MP responde e o que
+> não responde) e `scripts/teste-fatia0-mercadopago.mjs` (o teste que
+> decide). Nada disso precisa ser refeito — a pergunta em aberto continua
+> sendo uma só: `application_fee` funciona com Pix?
+
+### Plano original (mantido para a v2)
+
 
 **Plano detalhado em `docs/fase6_pagamentos.md`** (escrito antes de
 qualquer código, no espírito da Fase 5). Decisões já tomadas: meios da v1
@@ -276,6 +326,13 @@ O trigger já calcula o valor proporcional e o split
 fake antes de encostar num petshop real.
 
 ## Fase 7 — Deploy + piloto com 1 petshop real → beta
+
+> **Escopo revisado em 30/ago/2026:** com a Fase 6 adiada, o piloto valida
+> as Fases 0–5 e 8 — agenda, cadastro, planos, assinaturas, lembretes por
+> WhatsApp e administração da plataforma. Pagamento é sempre presencial,
+> registrado por `marcar_pagamento_local()`. Ver `docs/plano-mei-pix.md`
+> para o custo e `docs/piloto-caixa-zero.md` para o raciocínio de escopo.
+
 
 - [ ] Vercel ligado ao repo (env vars cadastradas lá também).
 - [ ] Projeto Supabase de produção.

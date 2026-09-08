@@ -13,6 +13,10 @@ export interface Petshop {
   cnpj: string | null;
   telefone: string | null;
   endereco: string | null;
+  // Migration 0027 — pra onde vao avisos administrativos por e-mail deste
+  // petshop. Distinto do e-mail de LOGIN de cada usuario em
+  // usuarios_petshop -> auth.users (ver lib/email/).
+  email_notificacoes: string | null;
   fee_fixo_mensal: number;
   percentual_plataforma: number;
   isento_fee_ate: string | null;
@@ -42,6 +46,10 @@ export interface Petshop {
   // Ver supabase/migrations/0004_intervalo_agendamento.sql — espaçamento
   // entre horários selecionáveis na agenda (lib/horarios.ts).
   intervalo_agendamento_minutos: number;
+  // Migration 0026 — por quanto tempo a reserva do tutor segura o estoque.
+  // Configuravel porque petshop de bairro e de shopping tem paciencia
+  // diferente com produto parado esperando retirada.
+  reserva_prazo_horas: number;
   // Migration 0017 — congelamento/encerramento de conta pelo admin da
   // plataforma. "ativo" (padrão) é o único status em que a equipe desse
   // petshop consegue logar (ver app/(app)/layout.tsx).
@@ -166,6 +174,19 @@ export interface Tutor {
   // listas/pickers padrão, histórico intacto). Ver
   // app/(app)/tutores/actions.ts, alternarAtivoTutor.
   ativo: boolean;
+  // Migration 0024 — acesso ao portal do tutor (/minha-conta). Ter cadastro
+  // NAO da acesso: a administracao libera tutor por tutor. auth_user_id fica
+  // nulo na maior parte da carteira.
+  auth_user_id: string | null;
+  acesso_liberado: boolean;
+  acesso_liberado_em: string | null;
+  // senha_provisoria = a senha atual foi definida pela administracao, nao
+  // pelo tutor; enquanto for true o portal so abre /minha-conta/nova-senha.
+  // O prazo e o que limita a janela de risco da senha padrao — ver o bloco
+  // "SOBRE A SENHA PADRAO" no fim de 0024_portal_tutor_acesso.sql.
+  senha_provisoria: boolean;
+  senha_provisoria_expira_em: string | null;
+  ultimo_login_em: string | null;
   criado_em: string;
 }
 
@@ -234,6 +255,10 @@ export interface Assinatura {
 }
 
 export type StatusAgendamento =
+  // Migration 0025 — pedido feito pelo tutor no portal, esperando o petshop
+  // aceitar ou recusar. So existe pra visita avulsa de quem NAO tem
+  // assinatura ativa: assinante marca direto em "agendado".
+  | "solicitado"
   | "agendado"
   | "confirmado"
   // Migration 0014 (18/ago/2026) — pet chegou, está no banho/tosa agora.
@@ -245,7 +270,11 @@ export type StatusAgendamento =
   | "entregue"
   | "faltou"
   | "reagendado"
-  | "cancelado";
+  | "cancelado"
+  // Migration 0025 — o petshop respondeu "nao" a um pedido do tutor.
+  // Diferente de "cancelado" de proposito: cancelar e desmarcar algo que
+  // valia; recusar e nunca ter valido.
+  | "recusado";
 
 // assinatura_id nulo = visita avulsa — nesse caso tutor_id/pet_id/servico_id/
 // preco_avulso vem preenchido (ver CHECK agendamentos_assinatura_xor_avulsa).
@@ -275,6 +304,9 @@ export interface Agendamento {
   // serviço). Opcional: visita sem responsável simplesmente não gera
   // comissão pra ninguém.
   funcionario_id: string | null;
+  // Migration 0025 — quem originou a visita: balcao, o proprio tutor pelo
+  // portal, ou o trigger de assinatura.
+  criado_por: "petshop" | "tutor" | "automatico";
   criado_em: string;
 }
 
@@ -513,12 +545,26 @@ export interface Produto {
   // edição manual do campo pela tela de catálogo (sem log em
   // movimentos_estoque ainda, ver comentário da migration).
   estoque_atual: number;
+  // Migration 0026 — unidades com reserva ativa de algum tutor.
+  // DISPONIVEL PRA VENDER = estoque_atual - estoque_reservado. Reservar nao
+  // tira do estoque_atual de proposito: o que esta na prateleira continua na
+  // prateleira, so passa a ter dono. Uma trigger em produtos impede que
+  // qualquer update deixe estoque_atual abaixo deste numero.
+  estoque_reservado: number;
   estoque_minimo: number | null;
   ativo: boolean;
   criado_em: string;
 }
 
-export type StatusVenda = "pendente" | "pago" | "cancelada";
+export type StatusVenda =
+  | "pendente"
+  | "pago"
+  | "cancelada"
+  // Migration 0026 — reserva feita pelo tutor no portal. Segura o estoque
+  // ate `reservado_ate`; vira 'pago' quando ele retira, 'expirada' quando o
+  // prazo vence.
+  | "reservada"
+  | "expirada";
 
 // tutor_id/agendamento_id opcionais de propósito — venda de balcão não
 // exige cliente cadastrado (decisão do Eduardo, 18/ago/2026).
@@ -538,6 +584,10 @@ export interface Venda {
   funcionario_id: string | null;
   comissao_percentual: number;
   valor_comissao: number;
+  // Migration 0026 — reserva do portal do tutor. `reservado_ate` e nulo em
+  // venda normal; `criado_por` diz se veio do balcao ou do proprio cliente.
+  reservado_ate: string | null;
+  criado_por: "balcao" | "tutor";
   criado_em: string;
 }
 

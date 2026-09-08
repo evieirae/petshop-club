@@ -3,6 +3,10 @@
 import { alerta, botao } from "@/lib/ui/styles";
 import { Badge } from "@/components/ui/Badge";
 import { StatusBadge } from "@/components/agenda/StatusBadge";
+import {
+  SeloRiscoFalta,
+  type MapaHistoricoFalta,
+} from "@/components/agenda/SeloRiscoFalta";
 import { tomCores } from "@/lib/ui/styles";
 import Link from "next/link";
 import { createContext, useContext, useState, useTransition, type FormEvent } from "react";
@@ -80,7 +84,22 @@ type FormularioAvulsaInfo = { data: string; horario?: string; tutorId?: string }
 // precisar passar prop por SemanaQuadro > célula > card > pendência. É uma
 // lista curta, lida (nunca escrita) por quem consome — o caso clássico de
 // contexto em vez de prop drilling.
+function SeloRiscoFaltaDaLista({ tutorId }: { tutorId: string }) {
+  const mapa = useContext(HistoricoFaltaContext);
+  return <SeloRiscoFalta historico={mapa[tutorId]} />;
+}
+
+function SeloRiscoFaltaDetalhado({ tutorId }: { tutorId: string }) {
+  const mapa = useContext(HistoricoFaltaContext);
+  return <SeloRiscoFalta historico={mapa[tutorId]} detalhado />;
+}
+
 const FuncionariosContext = createContext<Funcionario[]>([]);
+
+// Histórico de falta por tutor (migration 0023). Mesmo padrão do
+// FuncionariosContext: o dado é lido uma vez na page e consumido lá
+// embaixo, sem atravessar quatro componentes de props.
+const HistoricoFaltaContext = createContext<MapaHistoricoFalta>({});
 
 export function AgendaSection({
   petshopId,
@@ -97,6 +116,7 @@ export function AgendaSection({
   tutoresSemAgendamento,
   pendenciasConfirmacao,
   funcionarios,
+  historicoFalta,
 }: {
   petshopId: string;
   expediente: ExpedientePetshop;
@@ -112,6 +132,7 @@ export function AgendaSection({
   tutoresSemAgendamento: Tutor[];
   pendenciasConfirmacao: Agendamento[];
   funcionarios: Funcionario[];
+  historicoFalta: MapaHistoricoFalta;
 }) {
   const [formularioAvulsa, setFormularioAvulsa] = useState<FormularioAvulsaInfo | null>(null);
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
@@ -153,6 +174,7 @@ export function AgendaSection({
 
   return (
     <FuncionariosContext.Provider value={funcionarios}>
+      <HistoricoFaltaContext.Provider value={historicoFalta}>
     <div className="space-y-8">
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -339,6 +361,9 @@ export function AgendaSection({
                         {r.tutor?.nome ?? "Tutor removido"} · {r.rotulo}
                       </span>
                     </span>
+                    {r.tutor && (
+                      <SeloRiscoFaltaDaLista tutorId={r.tutor.id} />
+                    )}
                     {r.agendamento.serie_id && (
                       <Badge tom="info">repete</Badge>
                     )}
@@ -429,6 +454,7 @@ export function AgendaSection({
         </section>
       )}
     </div>
+      </HistoricoFaltaContext.Provider>
     </FuncionariosContext.Provider>
   );
 }
@@ -484,6 +510,7 @@ function AgendamentoCard({
           <p className="text-xs text-ink-500">{racaDoPet(pet)}</p>
           <p className="text-xs text-ink-500">{rotulo}</p>
           {tutor?.telefone && <p className="text-xs text-ink-500">{tutor.telefone}</p>}
+          {tutor && <SeloRiscoFaltaDetalhado tutorId={tutor.id} />}
 
           {/*
             Quem atendeu (migration 0016) — só aparece se o petshop cadastrou

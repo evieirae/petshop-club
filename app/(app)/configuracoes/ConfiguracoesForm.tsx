@@ -33,6 +33,10 @@ type FormState = {
   horario_corte_confirmacao_tarde: string;
   horario_limite_petshop_tarde: string;
   falta_consome_visita_paga: boolean;
+  // Migration 0027 — plano de notificacoes por e-mail. String vazia = nao
+  // preenchido (vira null no submit), igual ao padrao ja usado por
+  // hora_inicio_intervalo/hora_fim_intervalo neste mesmo form.
+  email_notificacoes: string;
   comissao_ativa: boolean;
   comissao_percentual_venda: string;
   comissao_percentual_servico: string;
@@ -57,6 +61,7 @@ function estadoInicial(petshop: Petshop): FormState {
       petshop.horario_limite_petshop_tarde
     ),
     falta_consome_visita_paga: petshop.falta_consome_visita_paga,
+    email_notificacoes: petshop.email_notificacoes ?? "",
     // Migration 0016 — guardado como string no form (igual
     // intervalo_agendamento_minutos) pra deixar o campo esvaziar enquanto a
     // pessoa digita, sem virar NaN no meio do caminho.
@@ -129,6 +134,10 @@ export function ConfiguracoesForm({
       }
     }
 
+    if (form.email_notificacoes.trim() && !form.email_notificacoes.includes("@")) {
+      novosErros.email_notificacoes = "Não parece um e-mail válido.";
+    }
+
     setErros(novosErros);
     return Object.keys(novosErros).length === 0;
   }
@@ -151,6 +160,7 @@ export function ConfiguracoesForm({
       horario_corte_confirmacao_tarde: form.horario_corte_confirmacao_tarde,
       horario_limite_petshop_tarde: form.horario_limite_petshop_tarde,
       falta_consome_visita_paga: form.falta_consome_visita_paga,
+      email_notificacoes: form.email_notificacoes.trim() || null,
       comissao_ativa: form.comissao_ativa,
       comissao_percentual_venda: Number(form.comissao_percentual_venda) || 0,
       comissao_percentual_servico: Number(form.comissao_percentual_servico) || 0,
@@ -362,8 +372,8 @@ export function ConfiguracoesForm({
               <>
                 Você é admin da plataforma — edite esses valores (deste ou de
                 qualquer outro petshop) em{" "}
-                <Link href="/admin" className="font-medium text-brand-700 hover:underline">
-                  Administração
+                <Link href="/admin/petshops" className="font-medium text-brand-700 hover:underline">
+                  Petshops
                 </Link>
                 .
               </>
@@ -462,6 +472,29 @@ export function ConfiguracoesForm({
             </p>
           )}
         </div>
+      </FormSection>
+
+      <FormSection
+        numero="6"
+        titulo="Notificações"
+        descricao="Pra onde vão avisos administrativos por e-mail deste petshop — distinto do e-mail de login de cada pessoa da equipe."
+      >
+        <FormField
+          label="E-mail de notificações"
+          htmlFor="email_notificacoes"
+          hint="Ex.: contato@seupetshop.com.br. Pode ser um inbox compartilhado, não precisa ser login de ninguém."
+          error={erros.email_notificacoes}
+          full
+        >
+          <input
+            id="email_notificacoes"
+            type="email"
+            className={inputClass}
+            value={form.email_notificacoes}
+            onChange={(e) => atualizar("email_notificacoes", e.target.value)}
+            placeholder="contato@seupetshop.com.br"
+          />
+        </FormField>
       </FormSection>
 
       <div className="sticky bottom-4 flex items-center gap-4 rounded-xl border border-surface-border bg-surface-card/95 px-5 py-3 shadow-sm backdrop-blur">

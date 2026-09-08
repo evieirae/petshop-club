@@ -59,6 +59,23 @@ export const marcarFaltou = (id: string) => mudarStatus(id, "faltou");
 export const cancelarAgendamento = (id: string) => mudarStatus(id, "cancelado");
 
 // ----------------------------------------------------------------------------
+// Pedidos feitos pelo tutor no portal (migration 0025).
+//
+// Aceitar é só mudar o status pra 'agendado' — e é exatamente nesse UPDATE
+// que a cobrança da visita finalmente nasce, via
+// trg_agendamentos_cobranca_ao_aceitar. Enquanto o pedido está 'solicitado'
+// não existe cobrança nenhuma, de propósito: seria dinheiro debitado por uma
+// visita que o petshop ainda podia negar.
+//
+// Recusar usa 'recusado', não 'cancelado'. Cancelar é desmarcar algo que
+// valia; recusar é nunca ter valido — e separar os dois deixa medir quantos
+// pedidos o petshop nega. Os dois status estão fora do WHERE de
+// agendamentos_slot_unico, então recusar devolve o horário pra grade na hora.
+// ----------------------------------------------------------------------------
+export const aceitarPedidoAgendamento = (id: string) => mudarStatus(id, "agendado");
+export const recusarPedidoAgendamento = (id: string) => mudarStatus(id, "recusado");
+
+// ----------------------------------------------------------------------------
 // Desfazer um clique errado no quadro de status (Visão Geral e Agenda) — um
 // passo por chamada: entregue -> pronto -> presente -> agendado. Chama a
 // função do banco (migration 0014_status_presente_e_reversao.sql) em vez de

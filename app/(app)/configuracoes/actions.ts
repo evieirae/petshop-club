@@ -30,6 +30,11 @@ export type PetshopConfigInput = Pick<
   | "horario_corte_confirmacao_tarde"
   | "horario_limite_petshop_tarde"
   | "falta_consome_visita_paga"
+  // Migration 0027 — e-mail de contato do petshop pra avisos administrativos
+  // (plano de notificacoes por e-mail). Nao e trigger-protegido feito
+  // fee/percentual/status: qualquer petshop edita o proprio, igual aos
+  // outros campos operacionais desta tela.
+  | "email_notificacoes"
   // Migration 0016 — comissão. Fica aqui (e não numa tela nova) por decisão
   // do Eduardo: é parâmetro de operação do petshop, do mesmo naipe do
   // expediente. Percentuais em ponto percentual (5 = 5%), ao contrário de

@@ -25,10 +25,21 @@ function EstoqueBadge({ produto }: { produto: Produto }) {
   // Amarelo só quando existe um mínimo configurado e o saldo já bateu nele —
   // sem estoque_minimo preenchido, não tem base pra alertar "tá baixo".
   const baixo = produto.estoque_minimo != null && produto.estoque_atual <= produto.estoque_minimo;
+  // Migration 0026 — `estoque_atual` continua sendo o que existe na
+  // prateleira; o reservado aparece ao lado em vez de descontado, senão o
+  // inventário do petshop passaria a mentir.
+  const reservado = produto.estoque_reservado > 0;
   return (
-    <Badge tom={produto.estoque_atual === 0 ? "erro" : baixo ? "atencao" : "neutro"}>
-      {produto.estoque_atual} em estoque
-    </Badge>
+    <span className="inline-flex items-center gap-1.5">
+      <Badge tom={produto.estoque_atual === 0 ? "erro" : baixo ? "atencao" : "neutro"}>
+        {produto.estoque_atual} em estoque
+      </Badge>
+      {reservado && (
+        <Badge tom="info">
+          {produto.estoque_reservado} reservad{produto.estoque_reservado === 1 ? "a" : "as"}
+        </Badge>
+      )}
+    </span>
   );
 }
 

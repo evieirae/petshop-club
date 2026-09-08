@@ -38,6 +38,7 @@ export type VarianteBotao =
   | "primaria"
   | "cta"
   | "contorno"
+  | "contornoClaro"
   | "neutra"
   | "perigo"
   | "texto"
@@ -61,6 +62,15 @@ const BOTAO_VARIANTE: Record<VarianteBotao, string> = {
 
   contorno:
     "border border-brand-200 bg-surface-card text-brand-700 hover:border-brand-500 hover:bg-brand-50",
+
+  /**
+   * Contorno para superficie ESCURA (hero da home sobre foto / brand.900).
+   * Existe porque `contorno` e `neutra` carregam texto azul/cinza sobre card
+   * branco — ilegiveis sobre foto. Branco sobre brand.900 = 16.4:1.
+   * Nao use sobre fundo claro: o texto branco sumiria.
+   */
+  contornoClaro:
+    "border border-white/50 bg-white/10 text-white backdrop-blur-sm hover:border-white hover:bg-white/20",
 
   neutra:
     "border border-surface-border bg-surface-card text-ink-700 hover:bg-surface-muted hover:text-ink-900",

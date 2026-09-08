@@ -13,6 +13,7 @@ import type {
   Tutor,
 } from "@/types/database";
 import { AgendaSection } from "./AgendaSection";
+import { PedidosSection } from "./PedidosSection";
 
 export default async function AgendaPage({
   searchParams,
@@ -60,6 +61,7 @@ export default async function AgendaPage({
     { data: agendamentosAvulsosTodos },
     { data: lembretesEscalados },
     { data: funcionarios },
+    { data: historicoFaltaRows },
   ] = await Promise.all([
     supabase
       .from("agendamentos")
@@ -92,7 +94,29 @@ export default async function AgendaPage({
       .eq("petshop_id", petshopId)
       .eq("ativo", true)
       .order("nome"),
+    // Migration 0023 — histórico de falta por tutor. Só quem já merece
+    // atenção: 'ok' e 'sem_historico' não viram selo, então nem sobem.
+    supabase
+      .from("historico_falta_tutor")
+      .select("tutor_id, nivel, faltas_janela, janela_considerada")
+      .eq("petshop_id", petshopId)
+      .in("nivel", ["atencao", "alto"]),
   ]);
+
+  const historicoFalta = Object.fromEntries(
+    (historicoFaltaRows ?? []).map((h) => [h.tutor_id, h])
+  );
+
+  // Migration 0025 — pedidos que o tutor mandou pelo portal e ninguém
+  // respondeu. Consulta própria, fora do range da semana de propósito: um
+  // pedido pra daqui a três semanas não pode ficar invisível só porque a
+  // tela está mostrando esta semana.
+  const { data: pedidosPendentes } = await supabase
+    .from("agendamentos")
+    .select("*")
+    .eq("petshop_id", petshopId)
+    .eq("status", "solicitado")
+    .order("data_hora");
 
   const tutorIdsComAssinatura = new Set((assinaturas ?? []).map((a) => a.tutor_id));
   const tutorIdsComAvulso = new Set(
@@ -132,6 +156,14 @@ export default async function AgendaPage({
       </p>
 
       <div className="mt-8">
+        <PedidosSection
+          pedidos={(pedidosPendentes as Agendamento[]) ?? []}
+          tutores={(tutores as Tutor[]) ?? []}
+          pets={(pets as Pet[]) ?? []}
+          servicos={(servicos as Servico[]) ?? []}
+          categorias={(categorias as CategoriaServico[]) ?? []}
+        />
+
         <AgendaSection
           petshopId={petshopId}
           expediente={expediente}
@@ -147,6 +179,7 @@ export default async function AgendaPage({
           tutoresSemAgendamento={tutoresSemAgendamento}
           pendenciasConfirmacao={pendenciasConfirmacao}
           funcionarios={(funcionarios as Funcionario[]) ?? []}
+          historicoFalta={historicoFalta}
         />
       </div>
     </div>

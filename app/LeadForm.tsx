@@ -20,7 +20,7 @@ export function LeadForm() {
     setErro("");
 
     if (!email.trim()) {
-      setErro("Informe um e-mail pra receber a cotação.");
+      setErro("Informe um e-mail pra gente conseguir responder.");
       return;
     }
 
@@ -36,12 +36,12 @@ export function LeadForm() {
 
   if (enviado) {
     return (
-      <div id="cotacao" className={`${superficie.cardPadded} text-center`}>
-        <h2 className="font-display text-xl text-ink-900">Recebemos seu pedido</h2>
+      <div className={`${superficie.cardPadded} text-center`}>
+        <h2 className="font-display text-xl text-ink-900">Recebemos seu contato</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-ink-500">
-          Alguém do nosso time entra em contato com a cotação. Nenhum petshop
-          foi criado ainda — isso só acontece depois da gente conversar com
-          você.
+          Alguém do nosso time fala com você pra entender como o seu petshop
+          trabalha. Nenhum petshop foi criado ainda — isso só acontece depois
+          da gente conversar.
         </p>
       </div>
     );
@@ -49,16 +49,14 @@ export function LeadForm() {
 
   return (
     <form
-      id="cotacao"
       onSubmit={handleSubmit}
       className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${superficie.cardPadded}`}
     >
       <div className="sm:col-span-2">
-        <h2 className="font-display text-xl text-ink-900">Quero uma cotação</h2>
+        <h2 className="font-display text-xl text-ink-900">Quero conhecer o PetClub</h2>
         <p className="mt-1 text-sm text-ink-500">
-          Conta um pouco sobre o seu petshop — a gente entra em contato com
-          os próximos passos. Isso não cria conta nem cobra nada
-          automaticamente.
+          Conta um pouco sobre o seu petshop — a gente entra em contato com os
+          próximos passos. Isso não cria conta nenhuma: é só um contato.
         </p>
       </div>
 
@@ -112,7 +110,7 @@ export function LeadForm() {
 
       <div className="flex items-center gap-3 sm:col-span-2">
         <button type="submit" disabled={pending} className={botao({ tamanho: "lg" })}>
-          {pending ? "Enviando…" : "Quero uma cotação"}
+          {pending ? "Enviando…" : "Quero conhecer"}
         </button>
         {erro && (
           <p role="alert" className="text-sm text-danger-600">

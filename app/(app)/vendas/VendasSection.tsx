@@ -399,11 +399,24 @@ function NovaVendaForm({
           value={produtoId}
           onChange={(e) => setProdutoId(e.target.value)}
         >
-          {produtos.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome} — {formatarPreco(p.preco_venda)} ({p.estoque_atual} em estoque)
-            </option>
-          ))}
+          {/* Migration 0026 — o que aparece aqui é o DISPONÍVEL
+              (estoque_atual - estoque_reservado), não o estoque bruto:
+              unidade reservada por um tutor não pode ser vendida no balcão, e
+              a trigger trg_produtos_reserva rejeita a venda se tentar. Mostrar
+              o número cheio faria o balconista descobrir isso só no erro. */}
+          {produtos.map((p) => {
+            const livre = Math.max(p.estoque_atual - p.estoque_reservado, 0);
+            return (
+              <option key={p.id} value={p.id}>
+                {p.nome} — {formatarPreco(p.preco_venda)} ({livre}{" "}
+                {livre === 1 ? "disponível" : "disponíveis"}
+                {p.estoque_reservado > 0
+                  ? `, ${p.estoque_reservado} ${p.estoque_reservado === 1 ? "reservada" : "reservadas"}`
+                  : ""}
+                )
+              </option>
+            );
+          })}
         </select>
       </FormField>
       <FormField label="Quantidade" htmlFor="venda_quantidade">
