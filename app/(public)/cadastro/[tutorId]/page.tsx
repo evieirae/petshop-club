@@ -4,6 +4,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ContatoAdicional, Pet, Porte, Tutor } from "@/types/database";
 import { CadastroForm } from "./CadastroForm";
 
+// Sem isso, o Next trata essa rota dinamica como estatica (nao chama
+// cookies()/headers()) e cacheia o HTML da PRIMEIRA visita a cada
+// [tutorId]/[lembreteId] para sempre (Full Route Cache) — inclusive numa
+// Netlify function, que reusa o cache entre requests. Bug real encontrado
+// em producao: tutor visitado uma vez sem pet cadastrado ficava preso na
+// mensagem "nenhum pet encontrado" mesmo depois do pet ser criado, porque
+// a pagina nunca mais rodava a query de novo. force-dynamic garante SSR
+// (e consulta ao Supabase) a cada request.
+export const dynamic = "force-dynamic";
+
 // Rota publica (fora do grupo (app), sem o guard de sessao de
 // app/(app)/layout.tsx) — e o link de autopreenchimento descrito em
 // docs/regras_padrao_petshop.md, seção 6. O id na URL é o próprio
