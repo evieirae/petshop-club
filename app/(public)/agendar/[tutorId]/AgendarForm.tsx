@@ -3,6 +3,7 @@
 import { botao } from "@/lib/ui/styles";
 import { useEffect, useState, useTransition } from "react";
 import type { CategoriaServico, FormaPagamento, Pet, PrecoServico, Servico } from "@/types/database";
+import type { ComposicaoPreco } from "@/lib/pagamento/composicaoPreco";
 import { FormField, inputClass } from "@/components/ui/FormField";
 import { agendarEPagar, buscarHorariosDisponiveis, type HorarioDisponivel } from "./actions";
 
@@ -19,47 +20,6 @@ function formatarPreco(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function arredondar(valor: number): number {
-  return Math.round(valor * 100) / 100;
-}
-
-// Mesma fórmula de calcularComposicaoPreco em
-// supabase/functions/processar-cobrancas/index.ts — decisão de 16/ago/2026
-// (docs/fase6_pagamentos.md, seção 1c): o petshop recebe sempre o valor
-// cheio do serviço; a receita da plataforma + a taxa do gateway (Pix=R$0)
-// são somadas ao tutor, mostradas separadas aqui pra transparência. Duplicada
-// de propósito (mesmo motivo de confirmar_agendamento_por_whatsapp na Fase
-// 5): esta função roda no browser do tutor, a outra roda numa Edge Function
-// Deno — não dá pra compartilhar módulo entre os dois runtimes sem um passo
-// de build a mais, que não vale a pena pra uma conta desse tamanho.
-//
-// Migration 0011 — 'local' bypassa o gateway inteiro: sem comissão da
-// plataforma, sem taxa de cartão/Pix, o tutor paga só o preço do serviço
-// direto no petshop. Mesma regra de trg_agendamento_processar_cobranca no
-// banco — se este cálculo divergir de lá, é bug aqui, não lá.
-function calcularComposicaoPreco(
-  valorServico: number,
-  percentualPlataforma: number,
-  meio: FormaPagamento,
-  taxaCartaoPercentual: number,
-  taxaCartaoFixo: number
-): { taxaPlataforma: number; taxaGateway: number; valorTotal: number } {
-  if (meio === "local") {
-    return { taxaPlataforma: 0, taxaGateway: 0, valorTotal: valorServico };
-  }
-
-  const taxaPlataforma = arredondar(valorServico * percentualPlataforma);
-  const base = valorServico + taxaPlataforma;
-
-  if (meio === "pix") {
-    return { taxaPlataforma, taxaGateway: 0, valorTotal: arredondar(base) };
-  }
-
-  const valorTotal = arredondar((base + taxaCartaoFixo) / (1 - taxaCartaoPercentual));
-  const taxaGateway = arredondar(valorTotal - base);
-  return { taxaPlataforma, taxaGateway, valorTotal };
-}
-
 export function AgendarForm({
   tutorId,
   petshopId,
@@ -67,10 +27,8 @@ export function AgendarForm({
   servicos,
   precos,
   categorias,
-  percentualPlataforma,
+  composicoes,
   formaPagamentoPreferida,
-  taxaCartaoPercentual,
-  taxaCartaoFixo,
 }: {
   tutorId: string;
   petshopId: string;
@@ -78,10 +36,8 @@ export function AgendarForm({
   servicos: Servico[];
   precos: PrecoServico[];
   categorias: CategoriaServico[];
-  percentualPlataforma: number;
+  composicoes: Record<string, ComposicaoPreco>;
   formaPagamentoPreferida: FormaPagamento;
-  taxaCartaoPercentual: number;
-  taxaCartaoFixo: number;
 }) {
   const [petId, setPetId] = useState(pets[0]?.id ?? "");
   const [servicoId, setServicoId] = useState("");
@@ -102,20 +58,14 @@ export function AgendarForm({
     (p) => p.servico_id === servicoId && p.porte_id === petAtual?.porte_id
   );
 
-  // Composição do preço (seção 1c do plano) — mesmo cálculo que
-  // processar-cobrancas vai usar de fato na hora de cobrar. Meio de
-  // pagamento aqui é o já cadastrado do tutor (forma_pagamento_preferida)
-  // — o portal ainda não deixa escolher cartão x Pix na hora do
-  // agendamento (fica pra uma próxima iteração).
-  const composicao = precoSelecionado
-    ? calcularComposicaoPreco(
-        precoSelecionado.preco,
-        percentualPlataforma,
-        formaPagamentoPreferida,
-        taxaCartaoPercentual,
-        taxaCartaoFixo
-      )
-    : null;
+  // Composição do preço (seção 1c do plano) — calculada no servidor
+  // (page.tsx), por preco.id, desde o fechamento do achado #15/#17 do
+  // checklist de segurança (07/set/2026). O client só faz o lookup pelo
+  // preço selecionado; o percentual da plataforma nunca chega no
+  // navegador. Meio de pagamento aqui é o já cadastrado do tutor
+  // (forma_pagamento_preferida) — o portal ainda não deixa escolher
+  // cartão x Pix na hora do agendamento (fica pra uma próxima iteração).
+  const composicao = precoSelecionado ? composicoes[precoSelecionado.id] ?? null : null;
 
   function nomeServico(servico: Servico): string {
     if (servico.nome_customizado) return servico.nome_customizado;

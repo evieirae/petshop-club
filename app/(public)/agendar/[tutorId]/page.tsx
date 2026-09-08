@@ -2,6 +2,7 @@ import { Logo } from "@/components/brand/Logo";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Pet, Servico, PrecoServico, CategoriaServico } from "@/types/database";
+import { calcularComposicaoPreco, type ComposicaoPreco } from "@/lib/pagamento/composicaoPreco";
 import { AgendarForm } from "./AgendarForm";
 
 // Rota pública (Fase 6 — docs/fase6_pagamentos.md, seção 7): mesmo padrão
@@ -63,6 +64,35 @@ export default async function AgendarPage({
     supabase.from("categorias_servico").select("*"),
   ]);
 
+  // Composição do preço calculada AQUI, no servidor (checklist de segurança
+  // #15/#17, 07/set/2026) — antes o percentual bruto da plataforma ia pro
+  // Client Component e ficava visível no HTML desta página pública, sem
+  // login. Agora só o resultado já calculado (composicoes, por preco.id)
+  // chega no navegador; ver lib/pagamento/composicaoPreco.ts.
+  //
+  // Taxa do cartão vem de env var, não hardcoded (mesma decisão de
+  // processar-cobrancas/index.ts) — mas ATENÇÃO: Edge Functions (Deno,
+  // `supabase secrets set`) e este app Next.js (`.env.local` / env vars da
+  // Netlify) são dois lugares DIFERENTES de config. ASAAS_TAXA_CARTAO_PERCENTUAL/
+  // _FIXO precisa estar cadastrado nos dois quando a Asaas mudar a taxa
+  // (16/nov/2026), senão o valor mostrado aqui diverge do valor cobrado de
+  // verdade pelo cron.
+  const percentualPlataforma = petshop?.percentual_plataforma ?? 0.03;
+  const formaPagamentoPreferida = tutor.forma_pagamento_preferida ?? "cartao";
+  const taxaCartaoPercentual = Number(process.env.ASAAS_TAXA_CARTAO_PERCENTUAL ?? "0.0199");
+  const taxaCartaoFixo = Number(process.env.ASAAS_TAXA_CARTAO_FIXO ?? "0.49");
+
+  const composicoes: Record<string, ComposicaoPreco> = {};
+  for (const preco of (precos ?? []) as PrecoServico[]) {
+    composicoes[preco.id] = calcularComposicaoPreco(
+      preco.preco,
+      percentualPlataforma,
+      formaPagamentoPreferida,
+      taxaCartaoPercentual,
+      taxaCartaoFixo
+    );
+  }
+
   return (
     <main className="flex min-h-screen justify-center px-4 py-10">
       <div className="w-full max-w-lg">
@@ -79,15 +109,6 @@ export default async function AgendarPage({
         </p>
 
         <div className="mt-8">
-          {/*
-            Taxa do cartão vem de env var, não hardcoded (mesma decisão de
-            processar-cobrancas/index.ts) — mas ATENÇÃO: Edge Functions
-            (Deno, `supabase secrets set`) e este app Next.js (`.env.local`
-            / env vars do Vercel) são dois lugares DIFERENTES de config.
-            ASAAS_TAXA_CARTAO_PERCENTUAL/_FIXO precisa estar cadastrado nos
-            dois quando a Asaas mudar a taxa (16/nov/2026), senão o valor
-            mostrado aqui diverge do valor cobrado de verdade pelo cron.
-          */}
           <AgendarForm
             tutorId={params.tutorId}
             petshopId={tutor.petshop_id}
@@ -95,10 +116,8 @@ export default async function AgendarPage({
             servicos={(servicos as Servico[]) ?? []}
             precos={(precos as PrecoServico[]) ?? []}
             categorias={(categorias as CategoriaServico[]) ?? []}
-            percentualPlataforma={petshop?.percentual_plataforma ?? 0.03}
-            formaPagamentoPreferida={tutor.forma_pagamento_preferida ?? "cartao"}
-            taxaCartaoPercentual={Number(process.env.ASAAS_TAXA_CARTAO_PERCENTUAL ?? "0.0199")}
-            taxaCartaoFixo={Number(process.env.ASAAS_TAXA_CARTAO_FIXO ?? "0.49")}
+            composicoes={composicoes}
+            formaPagamentoPreferida={formaPagamentoPreferida}
           />
         </div>
       </div>
