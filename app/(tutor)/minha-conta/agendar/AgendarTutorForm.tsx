@@ -252,7 +252,7 @@ export function AgendarTutorForm({
                     livre &&
                       !selecionado &&
                       "border-surface-border bg-surface-card text-ink-900 hover:border-brand-500 hover:bg-brand-50",
-                    livre && selecionado && "border-brand-500 bg-brand-500 text-white"
+                    livre && selecionado && "border-brand-500 bg-brand-500 text-brand-contrast"
                   )}
                 >
                   {h}

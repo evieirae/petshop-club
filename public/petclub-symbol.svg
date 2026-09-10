@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="PetClub">
   <title>PetClub</title>
-  <circle cx="50" cy="50" r="50" fill="#2B6CB0"/>
+  <circle cx="50" cy="50" r="50" fill="#14453F"/>
   <g fill="#FFFFFF">
     <ellipse cx="24.5" cy="41" rx="7.6" ry="10" transform="rotate(-24 24.5 41)"/>
     <ellipse cx="40.3" cy="29.5" rx="7.6" ry="11" transform="rotate(-8 40.3 29.5)"/>

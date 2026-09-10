@@ -6,134 +6,347 @@
  * Este é o ÚNICO arquivo onde valores de cor existem no projeto.
  *
  *   - `tailwind.config.ts` importa daqui e gera as classes (bg-brand-500, ...)
- *   - o mesmo import gera as CSS variables em :root (--color-brand-500, ...)
- *   - `lib/ui/styles.ts` monta as receitas de botão/lista/badge com essas classes
+ *     e as CSS variables por tema (--color-brand-500, ...) em
+ *     `:root[data-tema="..."]`.
+ *   - `lib/ui/styles.ts` monta as receitas de botão/lista/badge com essas classes.
+ *   - `lib/design/tema.ts` decide QUAL tema está ativo (cookie) e injeta o
+ *     atributo `data-tema` em `<html>` no layout raiz.
  *
  * Para mudar a identidade visual do app inteiro, mude AQUI. Nenhum componente,
  * página ou CSS carrega hex solto — se você precisar escrever um `#` fora deste
  * arquivo, é sinal de que falta um token.
  *
- * (Exceção: os SVGs de public/ e app/icon.svg, que são servidos como arquivo e
- * portanto não passam pelo build. Se o brand.500 mudar, atualize-os junto.)
+ * (Exceção: os SVGs de public/ e app/icon.svg, e lib/email/templates.ts, que
+ * são servidos/enviados fora do build do Tailwind e portanto não conseguem ler
+ * CSS variable nenhuma — carregam o tema padrão (ver TEMA_PADRAO) hardcoded.
+ * Se o brand.500 do tema padrão mudar, atualize-os junto.)
  *
  * ---------------------------------------------------------------------------
- *  PALETA BASE (as 4 cores da marca)
+ *  4 TEMAS (16/set/2026 — pedido do Eduardo: quero a troca de tema também)
  * ---------------------------------------------------------------------------
- *  Azul Confiança   #2B6CB0  → brand.500   segurança, tecnologia, higiene
- *  Verde Menta      #48BB78  → success.500 bem-estar, saúde, vitalidade
- *  Cinza Claro      #F7FAFC  → surface.page limpeza, contraste, usabilidade
- *  Amarelo Ocre     #ECC94B  → cta.500     destaque, chamada pra ação
+ * O app tinha uma única paleta fixa (Azul Confiança) até esta mudança. Agora
+ * existem 4 temas completos, trocáveis em runtime (ver ThemeSwitcher):
  *
- * Cada uma virou uma escala porque a cor "pura" quase nunca serve pros três
- * papéis que uma UI precisa: fundo suave, preenchimento sólido e texto legível.
- * Os tons de texto (`.700`) foram escolhidos para passar WCAG AA (4.5:1) sobre
- * o fundo `.50` correspondente — ver docs/design-tokens.md para a tabela de
- * contraste medida.
+ *   ardosia  (padrão) — verde-petróleo + dourado, sobre fundo claro.
+ *             Mesmo espírito de contraste alto / superfície clara do sistema
+ *             anterior — pensado pro uso no balcão, tablet, luz de loja.
+ *   vinho    — vinho + dourado, sobre fundo claro. Mesma base de superfície e
+ *              mesmos tons de status que ardosia (só o brand muda).
+ *   escuro   — a mesma dupla verde-petróleo/dourado, só que invertida pra
+ *              fundo escuro. Pensado pra quem fecha o caixa tarde.
+ *   marinho  — azul-marinho + dourado, sobre fundo escuro. Mesma base de
+ *              superfície e status que escuro (só o brand muda).
+ *
+ * Cada tema tem a MESMA forma de objeto (`Palette`) — os componentes nunca
+ * sabem qual tema está ativo, só usam `bg-brand-500`, `text-ink-700` etc.,
+ * que resolvem pra CSS variables diferentes conforme `[data-tema]` em <html>.
+ *
+ * IMPORTANTE — `ctaInk` e `brandContrast` NÃO são iguais a `ink.900`/branco
+ * fixos: em ardosia/vinho (temas claros) o texto sobre um preenchimento
+ * sólido de marca é branco e sobre o CTA é escuro — igual ao sistema antigo.
+ * Em escuro/marinho (temas escuros) o `ink.900` do tema é CLARO (pra ler
+ * sobre fundo escuro), então um botão de preenchimento sólido de marca ou
+ * CTA (que continuam sendo blocos "claros" mesmo dentro de um tema escuro)
+ * precisa de um texto ESCURO próprio — por isso os dois tokens existem
+ * separados do resto da escala `ink`. Nunca escreva `text-ink-900` num botão
+ * de preenchimento sólido — use `text-brand-contrast` ou `text-cta-ink`.
+ *
+ * ---------------------------------------------------------------------------
+ *  COMO AS RAMPAS FORAM GERADAS
+ * ---------------------------------------------------------------------------
+ * Cada tema define, à mão (a partir do canvas de design), só as âncoras:
+ * brand.500, cta.500 (+ o texto fixo de cada um), bg/card/border/ink e o par
+ * bg+texto de cada tom de status (sucesso/progresso/info/erro). O resto da
+ * rampa (50–900, e os degraus 100/600 de cada status) foi GERADO por script
+ * (scripts locais, fora do repo) medindo, na paleta antiga (Azul Confiança),
+ * o quanto de branco/preto cada degrau tinha misturado no seu 500 — e
+ * aplicando a mesma mistura na âncora nova. Nos temas escuros a direção da
+ * mistura é invertida (tint vira mistura-com-preto, shade vira
+ * mistura-com-branco), senão um "brand-50" saía quase-branco flutuando sobre
+ * um app de fundo escuro. Todo resultado foi conferido contra WCAG 2.1 (ver
+ * tabela em docs/design-tokens.md) e ajustado onde ficou abaixo do mínimo.
  */
 
-export const palette = {
-  /**
-   * AZUL CONFIANÇA — ação primária.
-   * Botão principal, item ativo do menu, foco de teclado, links, ícones.
-   */
-  brand: {
-    50: "#EBF2FA", // fundo suave: item ativo do menu, chip, ícone em card
-    100: "#D6E4F5", // hover de fundo suave, borda de destaque
-    200: "#A9C6E8", // bordas, divisores com cor
-    300: "#7BA8DB", // estados desabilitados de elementos coloridos
-    400: "#4D8AC9", // hover sobre fundo escuro
-    500: "#2B6CB0", // ★ Azul Confiança — botão primário, foco (branco: 5.4:1)
-    600: "#245A94", // hover do botão primário
-    700: "#1D4877", // pressed + texto azul sobre brand.50 (8.2:1)
-    800: "#163659",
-    900: "#0F243B",
-  },
+export const temas = ["ardosia", "vinho", "escuro", "marinho"] as const;
+export type Tema = (typeof temas)[number];
+export const TEMA_PADRAO: Tema = "ardosia";
 
-  /**
-   * VERDE MENTA — estados positivos.
-   * Confirmado, pago, ativo, salvo com sucesso.
-   */
-  success: {
-    50: "#F0FFF4", // fundo do badge "confirmado"
-    100: "#C6F6D5", // borda do badge
-    500: "#48BB78", // ★ Verde Menta — preenchimentos, ícones, barras
-    600: "#38A169", // hover
-    700: "#276749", // texto verde: 6.7:1 no branco, 6.5:1 sobre success.50
-  },
+export const NOME_TEMA: Record<Tema, string> = {
+  ardosia: "Ardósia",
+  vinho: "Vinho",
+  escuro: "Escuro",
+  marinho: "Marinho",
+};
 
-  /**
-   * AMARELO OCRE — CTA e atenção.
-   * REGRA: sempre com texto escuro (ink.900). Texto branco sobre ocre dá
-   * 1.8:1 e reprova em qualquer nível de acessibilidade.
-   */
-  cta: {
-    50: "#FFFBEB", // fundo de aviso
-    100: "#FEF3C7", // borda de aviso
-    500: "#ECC94B", // ★ Amarelo Ocre — botão de CTA (com ink.900: 10.0:1)
-    600: "#D69E2E", // hover do CTA
-    700: "#975A16", // texto âmbar sobre cta.50 (5.3:1)
+export const paletas = {
+  ardosia: {
+    brand: {
+      "50": "#ECF0EF",
+      "100": "#D8E0DF",
+      "200": "#AABCBA",
+      "300": "#7C9794",
+      "400": "#496F6B",
+      "500": "#14453F",
+      "600": "#113A35",
+      "700": "#0D2E2A",
+      "800": "#0A2320",
+      "900": "#071715",
+    },
+    success: {
+      "50": "#E7F1E6",
+      "100": "#BED0C0",
+      "500": "#72937A",
+      "600": "#51785B",
+      "700": "#2B5A38",
+    },
+    cta: {
+      "50": "#FCF8F0",
+      "100": "#F7E9D0",
+      "500": "#D6900F",
+      "600": "#B87C0D",
+      "700": "#634207",
+    },
+    ctaInk: "#241F1A",
+    danger: {
+      "50": "#FBEAE7",
+      "100": "#DFC1BB",
+      "500": "#AC756A",
+      "600": "#955446",
+      "700": "#7C2E1E",
+    },
+    progress: {
+      "50": "#F0E9F3",
+      "100": "#CBC1D3",
+      "500": "#897999",
+      "600": "#6B587F",
+      "700": "#4A3462",
+    },
+    info: {
+      "50": "#EBF2F7",
+      "100": "#BFD0DC",
+      "500": "#6A8EA8",
+      "600": "#4D7896",
+      "700": "#25597E",
+    },
+    ink: {
+      "400": "#B4AE9F",
+      "500": "#777064",
+      "700": "#59534A",
+      "900": "#211E19",
+    },
+    surface: {
+      DEFAULT: "#FAFAF7",
+      card: "#FFFFFF",
+      muted: "#F4F5F0",
+      border: "#E4E7DF",
+      strong: "#D1D6C9",
+    },
+    brandContrast: "#FFFFFF",
   },
-
-  /**
-   * VERMELHO — erro e estados negativos.
-   * Não estava no briefing, mas o app já usava um token de "pendente" pra
-   * erro de formulário, falha de cobrança e "faltou". Vermelho é o único
-   * sinal que o usuário lê como problema sem precisar ler o texto.
-   */
-  danger: {
-    50: "#FFF5F5",
-    100: "#FED7D7",
-    500: "#E53E3E",
-    600: "#C53030", // texto de erro (5.5:1 no branco)
-    700: "#9B2C2C",
+  vinho: {
+    brand: {
+      "50": "#F4EDEF",
+      "100": "#E9DBDF",
+      "200": "#CFB1BA",
+      "300": "#B58795",
+      "400": "#98586B",
+      "500": "#7A2740",
+      "600": "#662136",
+      "700": "#521A2B",
+      "800": "#3E1420",
+      "900": "#290D16",
+    },
+    success: {
+      "50": "#E7F1E6",
+      "100": "#BED0C0",
+      "500": "#72937A",
+      "600": "#51785B",
+      "700": "#2B5A38",
+    },
+    cta: {
+      "50": "#FCF8F0",
+      "100": "#F7E9D0",
+      "500": "#D6900F",
+      "600": "#B87C0D",
+      "700": "#634207",
+    },
+    ctaInk: "#241F1A",
+    danger: {
+      "50": "#FBEAE7",
+      "100": "#DFC1BB",
+      "500": "#AC756A",
+      "600": "#955446",
+      "700": "#7C2E1E",
+    },
+    progress: {
+      "50": "#F0E9F3",
+      "100": "#CBC1D3",
+      "500": "#897999",
+      "600": "#6B587F",
+      "700": "#4A3462",
+    },
+    info: {
+      "50": "#EBF2F7",
+      "100": "#BFD0DC",
+      "500": "#6A8EA8",
+      "600": "#4D7896",
+      "700": "#25597E",
+    },
+    ink: {
+      "400": "#BBA9A6",
+      "500": "#7F6F6C",
+      "700": "#5C4E4C",
+      "900": "#241C1B",
+    },
+    surface: {
+      DEFAULT: "#FAF8F7",
+      card: "#FFFFFF",
+      muted: "#F5EFEE",
+      border: "#E9DEDC",
+      strong: "#DAC7C4",
+    },
+    brandContrast: "#FFFFFF",
   },
-
-  /**
-   * ROXO — em andamento, mão na massa.
-   * Também não estava no briefing (18/ago/2026): o quadro de visitas do dia
-   * da Visão Geral ganhou o status "Presente" (pet chegou, está no banho/
-   * tosa AGORA), que precisava de uma cor própria — reaproveitar `info`
-   * (azul, já usado por "pronto p/ busca") ou `atencao` (amarelo, já usado
-   * por "reagendado" no mesmo mapa de status de agendamento) criaria duas
-   * cores iguais pra dois status diferentes na mesma tela, o que quebra a
-   * regra de "uma cor = um significado". Roxo fica longe o bastante de
-   * azul/verde/amarelo/vermelho pra ser reconhecível de relance.
-   */
-  progress: {
-    50: "#FAF5FF",
-    100: "#E9D8FD",
-    500: "#805AD5",
-    600: "#6B46C1",
-    700: "#553C9A", // texto roxo: 8,0:1 no branco, 7,8:1 sobre progress.50
+  escuro: {
+    brand: {
+      "50": "#080F0D",
+      "100": "#101E1A",
+      "200": "#224138",
+      "300": "#356457",
+      "400": "#498A79",
+      "500": "#5FB39C",
+      "600": "#79BFAC",
+      "700": "#93CCBC",
+      "800": "#AED9CD",
+      "900": "#C9E5DD",
+    },
+    success: {
+      "50": "#1E3323",
+      "100": "#37573D",
+      "500": "#64996D",
+      "600": "#78B683",
+      "700": "#8FD79B",
+    },
+    cta: {
+      "50": "#0E0A04",
+      "100": "#2D210B",
+      "500": "#E8A93A",
+      "600": "#EDBD68",
+      "700": "#F4D7A4",
+    },
+    ctaInk: "#1E1810",
+    danger: {
+      "50": "#332019",
+      "100": "#5A3931",
+      "500": "#A0665B",
+      "600": "#C07A6F",
+      "700": "#E39184",
+    },
+    progress: {
+      "50": "#2C2333",
+      "100": "#4E4258",
+      "500": "#8C799B",
+      "600": "#A892B9",
+      "700": "#C7AEDA",
+    },
+    info: {
+      "50": "#1B3537",
+      "100": "#2C5659",
+      "500": "#4B9298",
+      "600": "#59ADB4",
+      "700": "#69CBD3",
+    },
+    ink: {
+      "400": "#6C6858",
+      "500": "#9B9686",
+      "700": "#CBC7BB",
+      "900": "#F3F1EA",
+    },
+    surface: {
+      DEFAULT: "#171915",
+      card: "#1F2320",
+      muted: "#262B26",
+      border: "#333A33",
+      strong: "#454F45",
+    },
+    brandContrast: "#0E1613",
   },
-
-  /**
-   * TEXTO — cinza-azulado, para casar com o azul da marca.
-   * ink.500 é o tom mais usado do app (texto auxiliar). Ficou em #4A5568
-   * (7.2:1) e não no cinza médio óbvio #718096, que dá 3.9:1 e reprova AA.
-   */
-  ink: {
-    900: "#1A202C", // títulos (15.4:1)
-    700: "#2D3748", // texto de label, corpo forte (11.6:1)
-    500: "#4A5568", // texto auxiliar, descrições (7.2:1)
-    400: "#718096", // placeholder e ícone decorativo — nunca texto de conteúdo
-  },
-
-  /**
-   * SUPERFÍCIES — o branco/cinza claro do briefing.
-   */
-  surface: {
-    DEFAULT: "#F7FAFC", // ★ fundo da página
-    card: "#FFFFFF", // cards, inputs, sidebar, topbar
-    muted: "#EDF2F7", // linha zebrada de tabela, hover de lista, chip neutro
-    border: "#E2E8F0", // bordas e divisores
-    strong: "#CBD5E0", // borda em hover / divisor com mais peso
+  marinho: {
+    brand: {
+      "50": "#070D12",
+      "100": "#0F1A24",
+      "200": "#21384E",
+      "300": "#335678",
+      "400": "#4678A7",
+      "500": "#5B9BD8",
+      "600": "#76ABDE",
+      "700": "#91BCE5",
+      "800": "#ACCCEB",
+      "900": "#C7DDF2",
+    },
+    success: {
+      "50": "#1E3323",
+      "100": "#37573D",
+      "500": "#64996D",
+      "600": "#78B683",
+      "700": "#8FD79B",
+    },
+    cta: {
+      "50": "#0E0A04",
+      "100": "#2D210B",
+      "500": "#E8A93A",
+      "600": "#EDBD68",
+      "700": "#F4D7A4",
+    },
+    ctaInk: "#1E1810",
+    danger: {
+      "50": "#332019",
+      "100": "#5A3931",
+      "500": "#A0665B",
+      "600": "#C07A6F",
+      "700": "#E39184",
+    },
+    progress: {
+      "50": "#2C2333",
+      "100": "#4E4258",
+      "500": "#8C799B",
+      "600": "#A892B9",
+      "700": "#C7AEDA",
+    },
+    info: {
+      "50": "#1B3537",
+      "100": "#2C5659",
+      "500": "#4B9298",
+      "600": "#59ADB4",
+      "700": "#69CBD3",
+    },
+    ink: {
+      "400": "#546882",
+      "500": "#8497AE",
+      "700": "#B9C6D9",
+      "900": "#EDF2F8",
+    },
+    surface: {
+      DEFAULT: "#0F1C2E",
+      card: "#16263D",
+      muted: "#1C2E48",
+      border: "#2A3F5C",
+      strong: "#365177",
+    },
+    brandContrast: "#0B1622",
   },
 } as const;
 
 /**
+ * Paleta do tema padrão — único uso legítimo de "palette" fora de um
+ * contexto com `data-tema` resolvido: SVGs estáticos, e-mail, e o
+ * `themeColor` do viewport (que o navegador não consegue trocar em runtime).
+ */
+export const palette = paletas[TEMA_PADRAO];
+
+/**
  * Raios, sombras e outros tokens não-cromáticos que as receitas usam.
- * Ficam aqui pelo mesmo motivo: um lugar só pra mexer.
+ * Não variam por tema.
  */
 export const shape = {
   radius: {
@@ -147,4 +360,4 @@ export const shape = {
   },
 } as const;
 
-export type Palette = typeof palette;
+export type Palette = (typeof paletas)[Tema];

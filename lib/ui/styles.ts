@@ -52,13 +52,13 @@ const BOTAO_BASE =
 
 const BOTAO_VARIANTE: Record<VarianteBotao, string> = {
   /** Azul Confiança. Branco sobre brand.500 = 5.4:1 (AA). */
-  primaria: "bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700",
+  primaria: "bg-brand-500 text-brand-contrast hover:bg-brand-600 active:bg-brand-700",
 
   /**
    * Amarelo Ocre. SEMPRE com texto ink.900 (10.0:1) — texto branco aqui daria
    * 1.8:1 e reprovaria em qualquer nível de acessibilidade.
    */
-  cta: "bg-cta-500 text-ink-900 hover:bg-cta-600 active:bg-cta-600",
+  cta: "bg-cta-500 text-cta-ink hover:bg-cta-600 active:bg-cta-600",
 
   contorno:
     "border border-brand-200 bg-surface-card text-brand-700 hover:border-brand-500 hover:bg-brand-50",
@@ -189,7 +189,7 @@ export type TomBadge = "neutro" | "info" | "sucesso" | "atencao" | "erro" | "pro
 
 const BADGE_TOM: Record<TomBadge, string> = {
   neutro: "bg-surface-muted text-ink-500",
-  info: "bg-brand-50 text-brand-700",
+  info: "bg-info-50 text-info-700",
   sucesso: "bg-success-50 text-success-700",
   atencao: "bg-cta-50 text-cta-700",
   erro: "bg-danger-50 text-danger-600",
@@ -227,7 +227,7 @@ export function badge(tom: TomBadge = "neutro", className?: string): string {
 export function pontoStatus(tom: TomBadge): string {
   const cores: Record<TomBadge, string> = {
     neutro: "bg-ink-500",
-    info: "bg-brand-500",
+    info: "bg-info-500",
     sucesso: "bg-success-700",
     atencao: "bg-cta-700",
     erro: "bg-danger-500",
@@ -260,7 +260,7 @@ export const formulario = {
 export type TomAlerta = "info" | "sucesso" | "atencao" | "erro";
 
 const ALERTA_TOM: Record<TomAlerta, string> = {
-  info: "border-brand-100 bg-brand-50 text-brand-700",
+  info: "border-info-100 bg-info-50 text-info-700",
   sucesso: "border-success-100 bg-success-50 text-success-700",
   atencao: "border-cta-100 bg-cta-50 text-cta-700",
   erro: "border-danger-100 bg-danger-50 text-danger-600",
