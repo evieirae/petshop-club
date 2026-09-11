@@ -12,7 +12,29 @@ import {
 import { Logo } from "@/components/brand/Logo";
 import { Cachorro, Gato, Patinha, TrilhaDePatinhas } from "@/components/brand/Ilustracoes";
 import { badge, botao, cx, superficie } from "@/lib/ui/styles";
+import { palette } from "@/lib/design/tokens";
 import { LeadForm } from "./LeadForm";
+
+/**
+ * As seções com foto (topo, cards "tutor"/"petshop" e a faixa de CTA) usam
+ * brand.900/700 como cortina escura fixa por trás de texto branco — os
+ * contrastes no comentário de cada seção (16:1, 4,9:1, ...) foram medidos
+ * contra esses tons específicos. Isso só é seguro com o tema PADRÃO: nos
+ * temas escuros (ver lib/design/tokens.ts), a rampa `brand` é invertida —
+ * `brand.900` vira um tom CLARO — o que apagaria o texto branco em vez de
+ * escurecer a foto. Como esta é a home pública (identidade de marca, não tela
+ * de tenant), ela usa sempre o tema padrão via `palette`, igual aos SVGs
+ * estáticos e ao `viewport.themeColor` de app/layout.tsx.
+ */
+const MARCA = palette.brand;
+
+/** Aplica opacidade a um hex de 6 dígitos (#RRGGBB) via canal alfa de 8 dígitos. */
+function comAlfa(hex: string, alfa: number): string {
+  const canal = Math.round(alfa * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${hex}${canal}`;
+}
 
 // Home institucional pública.
 //
@@ -193,7 +215,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-surface">
       {/* ===================== TOPO ===================== */}
-      <section className="relative isolate overflow-hidden bg-brand-900">
+      <section className="relative isolate overflow-hidden" style={{ backgroundColor: MARCA[900] }}>
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-cover bg-center"
@@ -201,7 +223,11 @@ export default function HomePage() {
         />
         {/* Escurecimento uniforme: deixa 55% da foto passar e tira o brilho
             que mataria o texto. */}
-        <div aria-hidden="true" className="absolute inset-0 bg-brand-900/45" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{ backgroundColor: comAlfa(MARCA[900], 0.45) }}
+        />
         {/* Cortina lateral onde o texto realmente fica. É isto que garante AA
             independentemente da foto: na faixa da esquerda o azul é opaco
             (branco = 16:1) e ela se dissolve até transparente na direita, onde
@@ -210,7 +236,10 @@ export default function HomePage() {
             5,4:1 — os dois passam AA. */}
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-r from-brand-900 via-brand-900/85 to-transparent"
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(to right, ${MARCA[900]}, ${comAlfa(MARCA[900], 0.85)}, transparent)`,
+          }}
         />
 
         <div className="relative mx-auto max-w-5xl px-4">
@@ -225,14 +254,17 @@ export default function HomePage() {
           </header>
 
           <div className="max-w-2xl py-16 sm:py-24">
-            <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-brand-100">
+            <p
+              className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide"
+              style={{ color: MARCA[100] }}
+            >
               <Patinha className="h-4 w-4 fill-cta-500" />
               Clube de banho e tosa
             </p>
             <h1 className="mt-3 font-display text-3xl leading-tight text-white sm:text-5xl">
               O banho do seu melhor amigo, marcado em trinta segundos.
             </h1>
-            <p className="mt-5 max-w-xl text-base text-brand-100 sm:text-lg">
+            <p className="mt-5 max-w-xl text-base sm:text-lg" style={{ color: MARCA[100] }}>
               Sem ligar, sem esperar resposta, sem descobrir que o horário já
               era. O PetClub cuida da agenda e dos avisos do seu petshop — pra
               sobrar tempo pra melhor parte, que é o pet.
@@ -251,7 +283,7 @@ export default function HomePage() {
               </a>
             </div>
 
-            <p className="mt-8 text-sm text-brand-100">
+            <p className="mt-8 text-sm" style={{ color: MARCA[100] }}>
               Agenda automática · Avisos no WhatsApp · Portal do tutor
             </p>
           </div>
@@ -315,7 +347,10 @@ export default function HomePage() {
             id="tutor"
             className={cx("scroll-mt-8 overflow-hidden", superficie.card)}
           >
-            <div className="relative flex h-44 items-end justify-center bg-brand-700">
+            <div
+              className="relative flex h-44 items-end justify-center"
+              style={{ backgroundColor: MARCA[700] }}
+            >
               <Cachorro className="h-36 w-36 opacity-90" />
               <div
                 aria-hidden="true"
@@ -324,7 +359,10 @@ export default function HomePage() {
               />
               <div
                 aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-t from-brand-900/85 to-brand-900/10"
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `linear-gradient(to top, ${comAlfa(MARCA[900], 0.85)}, ${comAlfa(MARCA[900], 0.1)})`,
+                }}
               />
               <h2 className="absolute bottom-0 left-0 p-5 font-display text-2xl text-white">
                 Para tutores
@@ -368,7 +406,10 @@ export default function HomePage() {
             id="petshop"
             className={cx("scroll-mt-8 overflow-hidden", superficie.card)}
           >
-            <div className="relative flex h-44 items-end justify-center bg-brand-700">
+            <div
+              className="relative flex h-44 items-end justify-center"
+              style={{ backgroundColor: MARCA[700] }}
+            >
               <Gato className="h-36 w-36 opacity-90" />
               <div
                 aria-hidden="true"
@@ -377,7 +418,10 @@ export default function HomePage() {
               />
               <div
                 aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-t from-brand-900/85 to-brand-900/10"
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `linear-gradient(to top, ${comAlfa(MARCA[900], 0.85)}, ${comAlfa(MARCA[900], 0.1)})`,
+                }}
               />
               <h2 className="absolute bottom-0 left-0 p-5 font-display text-2xl text-white">
                 Para petshops
@@ -492,7 +536,7 @@ export default function HomePage() {
       </section>
 
       {/* ===================== FAIXA ===================== */}
-      <section className="relative isolate overflow-hidden bg-brand-900">
+      <section className="relative isolate overflow-hidden" style={{ backgroundColor: MARCA[900] }}>
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-cover bg-center"
@@ -501,7 +545,11 @@ export default function HomePage() {
         {/* Texto centralizado aqui, então não dá pra usar cortina lateral como
             no topo: o escurecimento precisa ser uniforme. 85% segura o branco
             em 4,9:1 mesmo com foto clara atrás. */}
-        <div aria-hidden="true" className="absolute inset-0 bg-brand-900/85" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{ backgroundColor: comAlfa(MARCA[900], 0.85) }}
+        />
         <TrilhaDePatinhas className="absolute inset-0 fill-white/10" />
 
         <div className="relative mx-auto max-w-3xl px-4 py-16 text-center sm:py-20">

@@ -15,7 +15,15 @@
  *      certo, sem "flash" do tema padrão antes de hidratar.
  *   2. components/tema/ThemeSwitcher.tsx troca `document.documentElement`
  *      na hora (feedback instantâneo — é só CSS variable, não precisa
- *      recarregar nada) e chama `definirTema()` pra persistir no cookie.
+ *      recarregar nada) e chama `definirTema()` (lib/design/tema.actions.ts)
+ *      pra persistir no cookie.
+ *
+ * A Server Action `definirTema` mora em lib/design/tema.actions.ts, não
+ * aqui: este arquivo importa `next/headers` fora de uma Server Action (em
+ * `getTemaAtual`), e é importado por components/tema/ThemeSwitcher.tsx, um
+ * Client Component — misturar os dois no mesmo arquivo quebra o build
+ * ("You're importing a component that needs next/headers" + "It is not
+ * allowed to define inline 'use server' ... in Client Components").
  */
 
 import { cookies } from "next/headers";
@@ -32,19 +40,4 @@ function ehTemaValido(valor: string | undefined): valor is Tema {
 export function getTemaAtual(): Tema {
   const valor = cookies().get(TEMA_COOKIE)?.value;
   return ehTemaValido(valor) ? valor : TEMA_PADRAO;
-}
-
-/**
- * Server Action — chamada pelo ThemeSwitcher (client component) ao trocar
- * de tema. Só grava o cookie; quem atualiza a tela na hora é o próprio
- * client component (não precisamos de router.refresh() aqui: nada mais no
- * app depende do tema no servidor, é tudo CSS variable).
- */
-export async function definirTema(tema: Tema): Promise<void> {
-  "use server";
-  cookies().set(TEMA_COOKIE, tema, {
-    maxAge: 60 * 60 * 24 * 365, // 1 ano — é preferência de exibição, não sessão de login
-    sameSite: "lax",
-    path: "/",
-  });
 }

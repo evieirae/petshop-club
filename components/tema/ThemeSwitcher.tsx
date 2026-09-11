@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Palette as IconePaleta, Check } from "lucide-react";
 import { temas, NOME_TEMA, type Tema } from "@/lib/design/tokens";
-import { definirTema } from "@/lib/design/tema";
+import { definirTema } from "@/lib/design/tema.actions";
 import { cx } from "@/lib/ui/styles";
 
 /**
