@@ -78,13 +78,15 @@ async function buscarInfoAgendamento(supabase: any, agendamentoId: string | null
   ]);
 
   let tutorNome = "";
+  let tutorTelefone: string | null = null;
   if (pet?.tutor_id) {
     const { data: tutor } = await supabase
       .from("tutores")
-      .select("nome")
+      .select("nome, telefone")
       .eq("id", pet.tutor_id)
       .maybeSingle();
     tutorNome = tutor?.nome ?? "";
+    tutorTelefone = tutor?.telefone ?? null;
   }
 
   const dataHora = new Date(agendamento.data_hora);
@@ -93,6 +95,7 @@ async function buscarInfoAgendamento(supabase: any, agendamentoId: string | null
     tutorNome,
     petshopNome: petshop?.nome ?? "o petshop",
     petSexo: pet?.sexo ?? null,
+    tutorTelefone,
     dataFormatada: dataHora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
     horaFormatada: dataHora.toLocaleTimeString("pt-BR", {
       timeZone: "America/Sao_Paulo",
@@ -176,6 +179,7 @@ Deno.serve(async (req: Request) => {
             tutorNome: "",
             petshopNome,
             petSexo: null,
+            tutorTelefone: null,
             dataFormatada: "",
             horaFormatada: "",
           };

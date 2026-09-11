@@ -488,9 +488,20 @@ grant execute on function confirmar_agendamento_por_whatsapp(text, text) to serv
 -- O webhook NÃO tem job: quem chama é a Meta, direto na Edge Function
 -- pública (whatsapp-webhook), autenticada por assinatura HMAC.
 --
--- app.cron_secret é setado UMA VEZ, fora desta migration versionada (é
--- credencial, não schema):
---   alter database postgres set app.cron_secret = '<valor-aleatorio>';
+-- CORREÇÃO 11/09/2026: a abordagem original (`alter database postgres set
+-- app.cron_secret = '<valor>'`) NÃO funciona nesta versão hospedada do
+-- Postgres (17.x na Supabase) — dá `ERROR 42501: permission denied to set
+-- parameter`, porque SET de parâmetro custom via ALTER DATABASE/ROLE passou
+-- a exigir superuser (Postgres 15+), e a role `postgres` da Supabase não é
+-- superuser de verdade. Testado tanto `alter database` quanto
+-- `alter role postgres set ...` (self-set) — os dois falham igual.
+--
+-- Solução: Supabase Vault (extensão `supabase_vault`, já vem instalada).
+-- Setado UMA VEZ, fora desta migration versionada (é credencial, não
+-- schema):
+--   select vault.create_secret('<valor-aleatorio>', 'cron_secret', 'x-cron-secret da Edge Function enviar-lembretes');
+-- O job abaixo lê com:
+--   (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
 -- A Edge Function confere isso contra CRON_SECRET (supabase secrets set).
 -- Troque <PROJECT_REF> pela referência real do projeto Supabase antes de
 -- rodar isto contra produção.
@@ -512,7 +523,7 @@ select cron.schedule(
         url := 'https://<PROJECT_REF>.supabase.co/functions/v1/enviar-lembretes',
         headers := jsonb_build_object(
             'Content-Type', 'application/json',
-            'x-cron-secret', current_setting('app.cron_secret', true)
+            'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
         ),
         body := '{}'::jsonb
     );
