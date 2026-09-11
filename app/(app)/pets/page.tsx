@@ -3,6 +3,7 @@ import { getUsuarioContext } from "@/lib/auth/getContext";
 import { createClient } from "@/lib/supabase/server";
 import type { Agendamento, Assinatura, Pet, Porte, Tutor } from "@/types/database";
 import { resolverAgendamento } from "@/lib/agenda/resolver";
+import { texto } from "@/lib/ui/styles";
 import { PetsSection } from "./PetsSection";
 
 // Fase 4 (pedido de 18/ago/2026 — "cadastro pela plataforma do Pet"): nova
@@ -64,8 +65,8 @@ export default async function PetsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl text-ink-900">Pets</h1>
-      <p className="mt-1 text-sm text-ink-500">
+      <h1 className={texto.tituloPagina}>Pets</h1>
+      <p className={texto.subtitulo}>
         Cadastro pelo pet — o tutor é vinculado no mesmo fluxo. Dados do
         tutor (endereço, link de cadastro, forma de pagamento) e assinaturas
         continuam em Tutores.
