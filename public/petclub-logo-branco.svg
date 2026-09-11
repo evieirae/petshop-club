@@ -2,7 +2,7 @@
   <title>PetClub</title>
   <g>
     <circle cx="50" cy="50" r="50" fill="#FFFFFF"/>
-    <g fill="#2B6CB0">
+    <g fill="#14453F">
       <ellipse cx="24.5" cy="41" rx="7.6" ry="10" transform="rotate(-24 24.5 41)"/>
       <ellipse cx="40.3" cy="29.5" rx="7.6" ry="11" transform="rotate(-8 40.3 29.5)"/>
       <ellipse cx="59.7" cy="29.5" rx="7.6" ry="11" transform="rotate(8 59.7 29.5)"/>
