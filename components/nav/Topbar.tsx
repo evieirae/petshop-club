@@ -1,14 +1,11 @@
 import { Badge } from "@/components/ui/Badge";
 import { LogoutButton } from "./LogoutButton";
-import { ThemeSwitcher } from "@/components/tema/ThemeSwitcher";
 import type { Petshop, UsuarioPetshop } from "@/types/database";
-import type { Tema } from "@/lib/design/tokens";
 
 export function Topbar({
   usuario,
   petshop,
   ehAdminPlataforma,
-  tema,
 }: {
   usuario: UsuarioPetshop;
   petshop: Petshop;
@@ -16,8 +13,6 @@ export function Topbar({
   // não mais de uma coluna em usuarios_petshop. Resolvido em
   // app/(app)/layout.tsx, que já checa isso pro Sidebar.
   ehAdminPlataforma: boolean;
-  /** Tema ativo (cookie), lido no servidor — ver lib/design/tema.ts. */
-  tema: Tema;
 }) {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-surface-border bg-surface-card/95 px-6 py-3 backdrop-blur">
@@ -34,10 +29,7 @@ export function Topbar({
           )}
         </p>
       </div>
-      <div className="flex items-center gap-1">
-        <ThemeSwitcher temaInicial={tema} />
-        <LogoutButton />
-      </div>
+      <LogoutButton />
     </header>
   );
 }

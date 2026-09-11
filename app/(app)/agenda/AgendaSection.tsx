@@ -663,7 +663,7 @@ function AcaoBotao({
   children: React.ReactNode;
 }) {
   const estilo = destaque
-    ? "bg-brand-500 text-brand-contrast hover:bg-brand-700"
+    ? "bg-brand-500 text-white hover:bg-brand-700"
     : atencao
       ? "border border-surface-border text-danger-600 hover:border-danger-100"
       : "border border-surface-border text-ink-700 hover:border-brand-500 hover:text-brand-700";

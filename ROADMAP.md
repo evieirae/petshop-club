@@ -191,15 +191,8 @@ Nada disso é schema, então nada disso está em migration:
    `https://<PROJECT_REF>.supabase.co/functions/v1/whatsapp-webhook` com o
    mesmo `META_WEBHOOK_VERIFY_TOKEN`, e assinar os campos `messages` e
    `message_status`.
-7. **Segredo do cron no Postgres** (uma vez, fora de migration). CORREÇÃO
-   11/09/2026: `alter database postgres set app.cron_secret = ...` dá
-   `ERROR 42501: permission denied` nesta versão hospedada (Postgres 15+
-   exige superuser pra SET de parâmetro custom, e a role `postgres` da
-   Supabase não é superuser de verdade — testado também `alter role
-   postgres set ...`, mesmo erro). Use Supabase Vault em vez disso:
-   `select vault.create_secret('<mesmo-valor>', 'cron_secret', 'x-cron-secret da Edge Function enviar-lembretes');`
-   — ver comentário atualizado em
-   `supabase/migrations/0005_fase5_lembretes_whatsapp.sql`.
+7. **Segredo do cron no Postgres** (uma vez, fora de migration):
+   `alter database postgres set app.cron_secret = '<mesmo-valor>';`
 8. **URL do job**: trocar `<PROJECT_REF>` no `cron.schedule` de
    `lembretes-enviar` pela referência real do projeto (`cron.schedule` faz
    upsert pelo nome do job — dá pra re-rodar só esse trecho).

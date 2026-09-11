@@ -1,18 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Newsreader, Manrope, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { palette } from "@/lib/design/tokens";
-import { getTemaAtual } from "@/lib/design/tema";
 
-const newsreader = Newsreader({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  variable: "--font-newsreader",
+  variable: "--font-fraunces",
   display: "swap",
 });
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -34,12 +33,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg" },
 };
 
-/**
- * Cor da barra do navegador no mobile — brand.500 do tema PADRÃO.
- * O navegador não recalcula isso em runtime quando o usuário troca de tema
- * pelo ThemeSwitcher (é meta estático), então fica sempre a cor do tema
- * padrão — mesma limitação que qualquer app com theme-color fixo.
- */
+/** Cor da barra do navegador no mobile — Azul Confiança (brand.500). */
 export const viewport: Viewport = {
   themeColor: palette.brand[500],
 };
@@ -49,14 +43,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Lido do cookie no servidor — o HTML já chega com o tema certo, sem
-  // "flash" do tema padrão antes de hidratar (ver lib/design/tema.ts).
-  const tema = getTemaAtual();
-
   return (
-    <html lang="pt-BR" data-tema={tema}>
+    <html lang="pt-BR">
       <body
-        className={`${newsreader.variable} ${manrope.variable} ${plexMono.variable} font-sans bg-surface text-ink-900 antialiased`}
+        className={`${fraunces.variable} ${inter.variable} ${plexMono.variable} font-sans bg-surface text-ink-900 antialiased`}
       >
         {children}
       </body>

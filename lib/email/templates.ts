@@ -14,11 +14,11 @@
 
 import { appUrl } from "./resend";
 
-const AZUL = "#14453F"; // brand.500 (tema padrão: Ardósia)
-const AZUL_ESCURO = "#0D2E2A"; // brand.700 (Ardósia)
-const CINZA_TEXTO = "#777064"; // ink.500 (Ardósia)
-const CINZA_CLARO = "#FAFAF7"; // surface.page (Ardósia)
-const CINZA_RODAPE = "#B4AE9F"; // ink.400 (Ardósia)
+const AZUL = "#2B6CB0"; // brand.500
+const AZUL_ESCURO = "#1D4877"; // brand.700
+const CINZA_TEXTO = "#4A5568";
+const CINZA_CLARO = "#F7FAFC"; // surface.page
+const CINZA_RODAPE = "#A0AEC0";
 
 function layout(opts: {
   titulo: string;

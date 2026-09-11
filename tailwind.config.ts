@@ -1,94 +1,54 @@
 import type { Config } from "tailwindcss";
 import plugin from "tailwindcss/plugin";
-import { shape } from "./lib/design/tokens";
+import { palette, shape } from "./lib/design/tokens";
 
 /**
  * NÃO escreva cores aqui. Todas vêm de lib/design/tokens.ts — este arquivo só
- * traduz aquilo em (a) classes utilitárias do Tailwind e (b) CSS variables,
- * uma para cada tema, escopadas em `:root[data-tema="..."]`.
+ * traduz aquele objeto em (a) classes utilitárias do Tailwind e (b) CSS
+ * variables em :root, para que exista uma fonte única de verdade.
  *
- * Diferente de antes: as classes do Tailwind (`bg-brand-500`, `text-ink-900`,
- * ...) NÃO compilam mais pra hex literal — compilam pra `var(--color-...)`.
- * Isso é o que permite trocar de tema em runtime (ver lib/design/tema.ts e
- * components/tema/ThemeSwitcher.tsx) sem recarregar a página nem recompilar
- * nada: o navegador só troca qual bloco `[data-tema]` está em vigor.
- *
- * `:root:not([data-tema])` cobre o instante antes do atributo ser aplicado
- * (ou qualquer contexto fora do <html> do app, como um preview isolado) —
- * cai no tema padrão (ardosia), igual ao `TEMA_PADRAO` de tokens.ts.
+ * As CSS variables (--color-brand-500, --color-ink-900, ...) existem para os
+ * casos em que uma classe não serve: `style` inline, canvas/gráfico, SVG
+ * gerado em runtime, e-mail. Elas são derivadas do mesmo objeto, então nunca
+ * saem de sincronia com as classes.
  */
+
+/** Achata { brand: { 500: "#..." } } em { "brand-500": "#..." } pras CSS vars. */
+function flatten(obj: Record<string, unknown>, prefixo = ""): Record<string, string> {
+  return Object.entries(obj).reduce<Record<string, string>>((acc, [chave, valor]) => {
+    const nome = chave === "DEFAULT" ? prefixo.replace(/-$/, "") : `${prefixo}${chave}`;
+    if (typeof valor === "string") {
+      acc[nome] = valor;
+    } else if (valor && typeof valor === "object") {
+      Object.assign(acc, flatten(valor as Record<string, unknown>, `${nome}-`));
+    }
+    return acc;
+  }, {});
+}
+
+const cssVars = Object.entries(flatten(palette as unknown as Record<string, unknown>)).reduce<
+  Record<string, string>
+>((acc, [nome, valor]) => {
+  acc[`--color-${nome}`] = valor;
+  return acc;
+}, {});
 
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        brand: {
-          "50": "var(--color-brand-50)",
-          "100": "var(--color-brand-100)",
-          "200": "var(--color-brand-200)",
-          "300": "var(--color-brand-300)",
-          "400": "var(--color-brand-400)",
-          "500": "var(--color-brand-500)",
-          "600": "var(--color-brand-600)",
-          "700": "var(--color-brand-700)",
-          "800": "var(--color-brand-800)",
-          "900": "var(--color-brand-900)",
-          "contrast": "var(--color-brand-contrast)",
-        },
-        success: {
-          "50": "var(--color-success-50)",
-          "100": "var(--color-success-100)",
-          "500": "var(--color-success-500)",
-          "600": "var(--color-success-600)",
-          "700": "var(--color-success-700)",
-        },
-        cta: {
-          "50": "var(--color-cta-50)",
-          "100": "var(--color-cta-100)",
-          "500": "var(--color-cta-500)",
-          "600": "var(--color-cta-600)",
-          "700": "var(--color-cta-700)",
-          "ink": "var(--color-cta-ink)",
-        },
-        danger: {
-          "50": "var(--color-danger-50)",
-          "100": "var(--color-danger-100)",
-          "500": "var(--color-danger-500)",
-          "600": "var(--color-danger-600)",
-          "700": "var(--color-danger-700)",
-        },
-        progress: {
-          "50": "var(--color-progress-50)",
-          "100": "var(--color-progress-100)",
-          "500": "var(--color-progress-500)",
-          "600": "var(--color-progress-600)",
-          "700": "var(--color-progress-700)",
-        },
-        info: {
-          "50": "var(--color-info-50)",
-          "100": "var(--color-info-100)",
-          "500": "var(--color-info-500)",
-          "600": "var(--color-info-600)",
-          "700": "var(--color-info-700)",
-        },
-        ink: {
-          "400": "var(--color-ink-400)",
-          "500": "var(--color-ink-500)",
-          "700": "var(--color-ink-700)",
-          "900": "var(--color-ink-900)",
-        },
-        surface: {
-          "DEFAULT": "var(--color-surface)",
-          "card": "var(--color-surface-card)",
-          "muted": "var(--color-surface-muted)",
-          "border": "var(--color-surface-border)",
-          "strong": "var(--color-surface-strong)",
-        },
+        brand: palette.brand,
+        success: palette.success,
+        cta: palette.cta,
+        danger: palette.danger,
+        progress: palette.progress,
+        ink: palette.ink,
+        surface: palette.surface,
       },
       fontFamily: {
-        display: ["var(--font-newsreader)", "serif"],
-        sans: ["var(--font-manrope)", "sans-serif"],
+        display: ["var(--font-fraunces)", "serif"],
+        sans: ["var(--font-inter)", "sans-serif"],
         mono: ["var(--font-plex-mono)", "monospace"],
       },
       borderRadius: {
@@ -104,200 +64,7 @@ const config: Config = {
   },
   plugins: [
     plugin(({ addBase }) => {
-      addBase({
-        ":root[data-tema='ardosia'], :root:not([data-tema])": {
-          "--color-brand-50": "#ECF0EF",
-          "--color-brand-100": "#D8E0DF",
-          "--color-brand-200": "#AABCBA",
-          "--color-brand-300": "#7C9794",
-          "--color-brand-400": "#496F6B",
-          "--color-brand-500": "#14453F",
-          "--color-brand-600": "#113A35",
-          "--color-brand-700": "#0D2E2A",
-          "--color-brand-800": "#0A2320",
-          "--color-brand-900": "#071715",
-          "--color-success-50": "#E7F1E6",
-          "--color-success-100": "#BED0C0",
-          "--color-success-500": "#72937A",
-          "--color-success-600": "#51785B",
-          "--color-success-700": "#2B5A38",
-          "--color-cta-50": "#FCF8F0",
-          "--color-cta-100": "#F7E9D0",
-          "--color-cta-500": "#D6900F",
-          "--color-cta-600": "#B87C0D",
-          "--color-cta-700": "#634207",
-          "--color-cta-ink": "#241F1A",
-          "--color-danger-50": "#FBEAE7",
-          "--color-danger-100": "#DFC1BB",
-          "--color-danger-500": "#AC756A",
-          "--color-danger-600": "#955446",
-          "--color-danger-700": "#7C2E1E",
-          "--color-progress-50": "#F0E9F3",
-          "--color-progress-100": "#CBC1D3",
-          "--color-progress-500": "#897999",
-          "--color-progress-600": "#6B587F",
-          "--color-progress-700": "#4A3462",
-          "--color-info-50": "#EBF2F7",
-          "--color-info-100": "#BFD0DC",
-          "--color-info-500": "#6A8EA8",
-          "--color-info-600": "#4D7896",
-          "--color-info-700": "#25597E",
-          "--color-ink-400": "#B4AE9F",
-          "--color-ink-500": "#777064",
-          "--color-ink-700": "#59534A",
-          "--color-ink-900": "#211E19",
-          "--color-surface": "#FAFAF7",
-          "--color-surface-card": "#FFFFFF",
-          "--color-surface-muted": "#F4F5F0",
-          "--color-surface-border": "#E4E7DF",
-          "--color-surface-strong": "#D1D6C9",
-          "--color-brand-contrast": "#FFFFFF",
-        },
-        ":root[data-tema='vinho']": {
-          "--color-brand-50": "#F4EDEF",
-          "--color-brand-100": "#E9DBDF",
-          "--color-brand-200": "#CFB1BA",
-          "--color-brand-300": "#B58795",
-          "--color-brand-400": "#98586B",
-          "--color-brand-500": "#7A2740",
-          "--color-brand-600": "#662136",
-          "--color-brand-700": "#521A2B",
-          "--color-brand-800": "#3E1420",
-          "--color-brand-900": "#290D16",
-          "--color-success-50": "#E7F1E6",
-          "--color-success-100": "#BED0C0",
-          "--color-success-500": "#72937A",
-          "--color-success-600": "#51785B",
-          "--color-success-700": "#2B5A38",
-          "--color-cta-50": "#FCF8F0",
-          "--color-cta-100": "#F7E9D0",
-          "--color-cta-500": "#D6900F",
-          "--color-cta-600": "#B87C0D",
-          "--color-cta-700": "#634207",
-          "--color-cta-ink": "#241F1A",
-          "--color-danger-50": "#FBEAE7",
-          "--color-danger-100": "#DFC1BB",
-          "--color-danger-500": "#AC756A",
-          "--color-danger-600": "#955446",
-          "--color-danger-700": "#7C2E1E",
-          "--color-progress-50": "#F0E9F3",
-          "--color-progress-100": "#CBC1D3",
-          "--color-progress-500": "#897999",
-          "--color-progress-600": "#6B587F",
-          "--color-progress-700": "#4A3462",
-          "--color-info-50": "#EBF2F7",
-          "--color-info-100": "#BFD0DC",
-          "--color-info-500": "#6A8EA8",
-          "--color-info-600": "#4D7896",
-          "--color-info-700": "#25597E",
-          "--color-ink-400": "#BBA9A6",
-          "--color-ink-500": "#7F6F6C",
-          "--color-ink-700": "#5C4E4C",
-          "--color-ink-900": "#241C1B",
-          "--color-surface": "#FAF8F7",
-          "--color-surface-card": "#FFFFFF",
-          "--color-surface-muted": "#F5EFEE",
-          "--color-surface-border": "#E9DEDC",
-          "--color-surface-strong": "#DAC7C4",
-          "--color-brand-contrast": "#FFFFFF",
-        },
-        ":root[data-tema='escuro']": {
-          "--color-brand-50": "#080F0D",
-          "--color-brand-100": "#101E1A",
-          "--color-brand-200": "#224138",
-          "--color-brand-300": "#356457",
-          "--color-brand-400": "#498A79",
-          "--color-brand-500": "#5FB39C",
-          "--color-brand-600": "#79BFAC",
-          "--color-brand-700": "#93CCBC",
-          "--color-brand-800": "#AED9CD",
-          "--color-brand-900": "#C9E5DD",
-          "--color-success-50": "#1E3323",
-          "--color-success-100": "#37573D",
-          "--color-success-500": "#64996D",
-          "--color-success-600": "#78B683",
-          "--color-success-700": "#8FD79B",
-          "--color-cta-50": "#0E0A04",
-          "--color-cta-100": "#2D210B",
-          "--color-cta-500": "#E8A93A",
-          "--color-cta-600": "#EDBD68",
-          "--color-cta-700": "#F4D7A4",
-          "--color-cta-ink": "#1E1810",
-          "--color-danger-50": "#332019",
-          "--color-danger-100": "#5A3931",
-          "--color-danger-500": "#A0665B",
-          "--color-danger-600": "#C07A6F",
-          "--color-danger-700": "#E39184",
-          "--color-progress-50": "#2C2333",
-          "--color-progress-100": "#4E4258",
-          "--color-progress-500": "#8C799B",
-          "--color-progress-600": "#A892B9",
-          "--color-progress-700": "#C7AEDA",
-          "--color-info-50": "#1B3537",
-          "--color-info-100": "#2C5659",
-          "--color-info-500": "#4B9298",
-          "--color-info-600": "#59ADB4",
-          "--color-info-700": "#69CBD3",
-          "--color-ink-400": "#6C6858",
-          "--color-ink-500": "#9B9686",
-          "--color-ink-700": "#CBC7BB",
-          "--color-ink-900": "#F3F1EA",
-          "--color-surface": "#171915",
-          "--color-surface-card": "#1F2320",
-          "--color-surface-muted": "#262B26",
-          "--color-surface-border": "#333A33",
-          "--color-surface-strong": "#454F45",
-          "--color-brand-contrast": "#0E1613",
-        },
-        ":root[data-tema='marinho']": {
-          "--color-brand-50": "#070D12",
-          "--color-brand-100": "#0F1A24",
-          "--color-brand-200": "#21384E",
-          "--color-brand-300": "#335678",
-          "--color-brand-400": "#4678A7",
-          "--color-brand-500": "#5B9BD8",
-          "--color-brand-600": "#76ABDE",
-          "--color-brand-700": "#91BCE5",
-          "--color-brand-800": "#ACCCEB",
-          "--color-brand-900": "#C7DDF2",
-          "--color-success-50": "#1E3323",
-          "--color-success-100": "#37573D",
-          "--color-success-500": "#64996D",
-          "--color-success-600": "#78B683",
-          "--color-success-700": "#8FD79B",
-          "--color-cta-50": "#0E0A04",
-          "--color-cta-100": "#2D210B",
-          "--color-cta-500": "#E8A93A",
-          "--color-cta-600": "#EDBD68",
-          "--color-cta-700": "#F4D7A4",
-          "--color-cta-ink": "#1E1810",
-          "--color-danger-50": "#332019",
-          "--color-danger-100": "#5A3931",
-          "--color-danger-500": "#A0665B",
-          "--color-danger-600": "#C07A6F",
-          "--color-danger-700": "#E39184",
-          "--color-progress-50": "#2C2333",
-          "--color-progress-100": "#4E4258",
-          "--color-progress-500": "#8C799B",
-          "--color-progress-600": "#A892B9",
-          "--color-progress-700": "#C7AEDA",
-          "--color-info-50": "#1B3537",
-          "--color-info-100": "#2C5659",
-          "--color-info-500": "#4B9298",
-          "--color-info-600": "#59ADB4",
-          "--color-info-700": "#69CBD3",
-          "--color-ink-400": "#546882",
-          "--color-ink-500": "#8497AE",
-          "--color-ink-700": "#B9C6D9",
-          "--color-ink-900": "#EDF2F8",
-          "--color-surface": "#0F1C2E",
-          "--color-surface-card": "#16263D",
-          "--color-surface-muted": "#1C2E48",
-          "--color-surface-border": "#2A3F5C",
-          "--color-surface-strong": "#365177",
-          "--color-brand-contrast": "#0B1622",
-        },
-      });
+      addBase({ ":root": cssVars });
     }),
   ],
 };

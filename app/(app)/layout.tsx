@@ -2,7 +2,6 @@ import { Logo } from "@/components/brand/Logo";
 import { redirect } from "next/navigation";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { getAdminContext } from "@/lib/auth/getAdminContext";
-import { getTemaAtual } from "@/lib/design/tema";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { Topbar } from "@/components/nav/Topbar";
 import { LogoutButton } from "@/components/nav/LogoutButton";
@@ -93,13 +92,12 @@ export default async function AppLayout({
   // admin da plataforma) — ver comentário de ITEM_ADMIN em
   // components/nav/Sidebar.tsx.
   const admin = await getAdminContext();
-  const tema = getTemaAtual();
 
   return (
     <div className="flex min-h-screen">
       <Sidebar ehAdminPlataforma={admin !== null} />
       <div className="flex flex-1 flex-col">
-        <Topbar usuario={contexto.usuario} petshop={contexto.petshop} ehAdminPlataforma={admin !== null} tema={tema} />
+        <Topbar usuario={contexto.usuario} petshop={contexto.petshop} ehAdminPlataforma={admin !== null} />
         <main className="flex-1 px-6 py-8">{children}</main>
       </div>
     </div>
