@@ -17,8 +17,8 @@ export function Toggle({
   labelOff: string;
 }) {
   const base = "flex-1 px-3 py-2 text-sm font-medium transition-colors";
-  const selecionado = "bg-brand-500 text-white";
-  const naoSelecionado = "bg-surface-card text-ink-700 hover:bg-surface-muted-muted hover:text-ink-900";
+  const selecionado = "bg-brand-500 text-brand-contrast";
+  const naoSelecionado = "bg-surface-card text-ink-700 hover:bg-surface-muted hover:text-ink-900";
 
   return (
     <div className="flex overflow-hidden rounded-lg border border-surface-border">

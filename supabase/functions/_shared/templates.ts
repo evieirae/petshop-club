@@ -15,6 +15,7 @@
 // conversa. Ver enviar-lembretes/index.ts.
 
 import type { TemplateWhatsApp } from "./meta-whatsapp.ts";
+import { normalizarTelefone } from "./meta-whatsapp.ts";
 
 const IDIOMA = "pt_BR";
 
@@ -28,6 +29,11 @@ export interface InfoAgendamento {
   // pet_pronto ("pronto"/"pronta"). Null = não informado, cai no masculino
   // por padrão (mesma convenção do "o pet" nos fallbacks abaixo).
   petSexo: "macho" | "femea" | null;
+  // 11/set/2026 — telefone do tutor (tutores.telefone), usado só pelo botão
+  // de URL dinâmica de confirmacao_pendente_petshop (link direto
+  // https://wa.me/<numero> pra equipe falar com o tutor). Null quando não
+  // dá pra resolver o pet/tutor do agendamento.
+  tutorTelefone: string | null;
 }
 
 // Payload específico de cobranca_pix — vem de lembretes.dados_extra
@@ -90,13 +96,19 @@ export function montarMensagem(ctx: ContextoMensagem): MensagemMontada | null {
         template: {
           nome: "cadastro_tutor",
           idioma: IDIOMA,
+          // Corpo reformulado em 11/set/2026: a Meta classificou a primeira
+          // versão ("preparou um cadastro pra você") como Marketing na
+          // checagem automática de submissão — soava convite/oferta. "Seu
+          // cadastro está pendente" descreve o status de algo que já existe
+          // (a conta do tutor), o que é o critério de Utilidade. Ver
+          // docs/whatsapp_templates_meta.md, template 4.
           parametrosCorpo: [petshop],
           // O template aprovado guarda a base .../cadastro/{{1}} — aqui vai
           // só o sufixo. Ver comentário em meta-whatsapp.ts.
           parametroBotaoUrl: ctx.tutorId,
         },
         textoLivre:
-          `Olá! Pra gente completar seu cadastro na ${petshop}, é só preencher esse formulário rapidinho: ` +
+          `Olá! Seu cadastro na ${petshop} está pendente — é só preencher os dados do seu pet pra finalizar: ` +
           `${ctx.appBaseUrl}/cadastro/${ctx.tutorId}`,
       };
     }
@@ -129,6 +141,16 @@ export function montarMensagem(ctx: ContextoMensagem): MensagemMontada | null {
 
     case "confirmacao_manual_petshop": {
       if (!ctx.info) return null;
+      // Botão "Chamar no WhatsApp" (11/set/2026) — leva a equipe direto pro
+      // chat com o tutor. O botão do template aprovado aponta pra
+      // APP_BASE_URL/whatsapp/{{1}} (rota-ponte em
+      // app/(public)/whatsapp/[telefone]/route.ts), NÃO direto pra wa.me —
+      // a Meta rejeita botão de URL apontando pro próprio domínio do
+      // WhatsApp. A rota só repassa pro wa.me de verdade. Sem telefone
+      // resolvido, cai numa URL "55" quebrada — não tem fallback melhor pra
+      // um número de telefone, mas isso só acontece se o pet do agendamento
+      // não tiver tutor com telefone cadastrado.
+      const telefoneBotao = normalizarTelefone(ctx.info.tutorTelefone ?? "");
       return {
         template: {
           nome: "confirmacao_pendente_petshop",
@@ -138,10 +160,12 @@ export function montarMensagem(ctx: ContextoMensagem): MensagemMontada | null {
             param(ctx.info.tutorNome, "tutor não identificado"),
             ctx.info.horaFormatada,
           ],
+          parametroBotaoUrl: telefoneBotao,
         },
         textoLivre:
           `${ctx.info.petshopNome}: o agendamento de ${ctx.info.petNome} (tutor ${ctx.info.tutorNome}) ` +
-          `pra amanhã às ${ctx.info.horaFormatada} ainda não foi confirmado pelo tutor — vale checar direto com o cliente.`,
+          `pra amanhã às ${ctx.info.horaFormatada} ainda não foi confirmado pelo tutor — vale checar direto com o cliente.` +
+          (ctx.info.tutorTelefone ? ` Chame no WhatsApp: https://wa.me/${telefoneBotao}` : ""),
       };
     }
 
@@ -200,6 +224,11 @@ export function montarMensagem(ctx: ContextoMensagem): MensagemMontada | null {
       // Pix no Asaas, tanto pra mensalidade de assinatura quanto pra visita
       // avulsa (por isso o corpo fala em "cobrança", não "mensalidade" —
       // ver docs/whatsapp_templates_meta.md, template 5).
+      //
+      // 11/set/2026 — a Meta rejeita corpo de template terminando em
+      // variável ("As variáveis não podem estar no início ou no fim do
+      // modelo"), e o {{4}} (código Pix) era o último caractere. Acrescentei
+      // uma frase fixa depois pra fechar o corpo com texto estático.
       if (!ctx.infoCobranca) return null;
       const nome = primeiroNome(param(ctx.nomeDestino, "tutor"));
       const petNome = param(ctx.infoCobranca.petNome, "seu pet");
@@ -213,7 +242,7 @@ export function montarMensagem(ctx: ContextoMensagem): MensagemMontada | null {
         },
         textoLivre:
           `Olá ${nome}! A cobrança do ${petNome} (${valorFormatado}) já está disponível pra pagamento via Pix. ` +
-          `Copia e cola: ${pixCopiaCola}`,
+          `Copia e cola: ${pixCopiaCola} Se já pagou, pode ignorar esta mensagem.`,
       };
     }
 

@@ -114,7 +114,22 @@ Confirmação pendente: {{1}} (tutor {{2}}) tem visita amanhã às {{3}} e ainda
 | 2 | Nome do tutor | Marina Souza |
 | 3 | Horário | 09:00 |
 
-Sem botão.
+**Botão (Call to action > Acessar o site, URL dinâmica):**
+`https://SEU-DOMINIO/whatsapp/{{1}}` — parâmetro enviado: telefone do tutor
+(`tutores.telefone`, formatado por `normalizarTelefone()` — DDI 55 + DDD +
+número, só dígitos). Texto do botão: `Chamar no WhatsApp`. Exemplo de
+sufixo: `5548999998888`.
+
+> Adicionado em 11/set/2026 — pedido pra equipe abrir o chat com o tutor
+> direto da notificação, sem precisar procurar o contato manualmente.
+>
+> **Por que não `https://wa.me/{{1}}` direto:** a Meta rejeita esse botão
+> na hora de criar o template — "Os botões não podem conter links diretos
+> para o WhatsApp". E o botão nativo "Ligar no WhatsApp" também não serve:
+> é a função de chamada de voz (Voice Call), com número FIXO definido na
+> criação do template — não dá pra variar por tutor. Por isso existe a
+> rota-ponte `app/(public)/whatsapp/[telefone]/route.ts`, que só recebe o
+> número e redireciona pro `wa.me` de verdade.
 
 ---
 
@@ -125,17 +140,20 @@ Sem botão.
 - **Vai para:** telefone que a equipe cadastrou (único dado que existe do
   tutor nesse momento)
 
-**Corpo:**
+**Corpo (revisado em 11/set/2026 — a versão original, "A {{1}} preparou um
+cadastro rapidinho pra você", foi sinalizada pela Meta como Marketing na
+checagem automática de submissão. "Seu cadastro está pendente" descreve o
+status de uma conta já existente, que é o critério de Utilidade):**
 
 ```
-Olá! A {{1}} preparou um cadastro rapidinho pra você — leva menos de dois minutos e é só preencher os dados do seu pet.
+Olá! Seu cadastro na {{1}} está pendente — é só preencher os dados do seu pet pra finalizar.
 ```
 
 | # | Conteúdo | Exemplo |
 |---|----------|---------|
 | 1 | Nome do petshop | Petshop Pedra Branca |
 
-**Botão (Call to action > Visitar site, URL dinâmica):**
+**Botão (Call to action > Acessar o site, URL dinâmica):**
 `https://SEU-DOMINIO/cadastro/{{1}}` — parâmetro enviado: `tutores.id`.
 Texto do botão: `Preencher cadastro`.
 
@@ -149,12 +167,14 @@ Texto do botão: `Preencher cadastro`.
   pra visita avulsa
 - **Vai para:** contato de `papel='cobranca'` do tutor
 
-**Corpo (revisado em 17/ago/2026 — generalizado de "mensalidade" pra
-"cobrança" pra servir os dois casos; nunca tinha sido submetido à Meta, daí
-dar pra mudar sem custo de resubmissão):**
+**Corpo (revisado em 11/set/2026 — a versão anterior terminava em {{4}};
+a Meta rejeita corpo de template terminando em variável, então entrou uma
+frase fixa no final. Generalizado de "mensalidade" pra "cobrança" em
+17/ago/2026 pra servir os dois casos; nunca tinha sido submetido à Meta
+antes dessa rodada, daí dar pra mudar sem custo de resubmissão):**
 
 ```
-Olá {{1}}! A cobrança do {{2}} ({{3}}) já está disponível pra pagamento via Pix. Copia e cola: {{4}}
+Olá {{1}}! A cobrança do {{2}} ({{3}}) já está disponível pra pagamento via Pix. Copia e cola: {{4}} Se já pagou, pode ignorar esta mensagem.
 ```
 
 | # | Conteúdo | Exemplo |

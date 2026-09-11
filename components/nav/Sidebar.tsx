@@ -74,7 +74,7 @@ export function Sidebar({ ehAdminPlataforma }: { ehAdminPlataforma: boolean }) {
                   ? // Barra azul à esquerda + fundo azul suave: o item ativo se
                     // identifica por posição e cor, não só por peso da fonte.
                     "bg-brand-50 font-medium text-brand-700 before:absolute before:left-0 before:top-1.5 before:h-[calc(100%-0.75rem)] before:w-0.5 before:rounded-pill before:bg-brand-500"
-                  : "text-ink-500 hover:bg-surface-muted-muted hover:text-ink-900",
+                  : "text-ink-500 hover:bg-surface-muted hover:text-ink-900",
               )}
             >
               <Icon size={17} aria-hidden="true" />
