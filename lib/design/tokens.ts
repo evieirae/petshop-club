@@ -71,6 +71,8 @@ export const temas = ["ardosia", "vinho", "escuro", "marinho"] as const;
 export type Tema = (typeof temas)[number];
 export const TEMA_PADRAO: Tema = "ardosia";
 
+export const TEMA_COOKIE = "petclub-tema";
+
 export const NOME_TEMA: Record<Tema, string> = {
   ardosia: "Ardósia",
   vinho: "Vinho",
