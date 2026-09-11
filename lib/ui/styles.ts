@@ -138,6 +138,12 @@ export const superficie = {
   card: "rounded-xl border border-surface-border bg-surface-card shadow-card",
   /** Card com padding já aplicado — o caso mais comum. */
   cardPadded: "rounded-xl border border-surface-border bg-surface-card p-6 shadow-card",
+  /**
+   * Tile de KPI — grade de números (Painel, Financeiro, Pets, Tutores).
+   * Padding mais compacto que `cardPadded` porque vive em grades de 3–6
+   * colunas, não como card solitário.
+   */
+  kpi: "rounded-xl border border-surface-border bg-surface-card p-4 shadow-card",
   /** Card clicável (NavCard, item de grade). */
   cardInterativo:
     "rounded-xl border border-surface-border bg-surface-card shadow-card transition-colors " +
