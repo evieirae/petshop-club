@@ -64,6 +64,8 @@ export type TutorInput = {
   telefone: string;
   email: string | null;
   endereco: string | null;
+  // Migration 0030 — bairro estruturado, separado do texto livre de endereco.
+  bairro: string | null;
   cadastro_completo: boolean;
   // Migration 0011 — preferência usada pelo trigger de cobrança pra já
   // nascer a cobrança marcada (cartão/Pix pelo Asaas, ou 'local' — sem
@@ -90,6 +92,7 @@ export async function atualizarTutor(
       telefone: dados.telefone.trim(),
       email: dados.email?.trim() || null,
       endereco: dados.endereco?.trim() || null,
+      bairro: dados.bairro?.trim() || null,
       cadastro_completo: dados.cadastro_completo,
       forma_pagamento_preferida: dados.forma_pagamento_preferida,
     }, { count: "exact" })

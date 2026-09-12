@@ -2,6 +2,7 @@ import { Logo } from "@/components/brand/Logo";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ContatoAdicional, Pet, Porte, Tutor } from "@/types/database";
+import { texto } from "@/lib/ui/styles";
 import { CadastroForm } from "./CadastroForm";
 
 // Sem isso, o Next trata essa rota dinamica como estatica (nao chama
@@ -50,10 +51,10 @@ export default async function CadastroTutorPage({
           <Logo tamanho="lg" />
         </div>
 
-        <h1 className="text-center font-display text-2xl text-ink-900">
+        <h1 className={`${texto.tituloPagina} text-center`}>
           Complete seu cadastro
         </h1>
-        <p className="mt-1 text-center text-sm text-ink-500">
+        <p className={`${texto.subtitulo} text-center`}>
           Confirme seus dados e os do(s) seu(s) pet(s) — leva menos de um
           minuto.
         </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { botao } from "@/lib/ui/styles";
+import { botao, texto } from "@/lib/ui/styles";
 import { useState, useTransition, type FormEvent } from "react";
 import type { ContatoAdicional, EspeciePet, Pet, Porte, Tutor } from "@/types/database";
 import { FormField, inputClass } from "@/components/ui/FormField";
@@ -34,6 +34,7 @@ export function CadastroForm({
   const [nome, setNome] = useState(tutor.nome === tutor.telefone ? "" : tutor.nome);
   const [telefone, setTelefone] = useState(tutor.telefone);
   const [endereco, setEndereco] = useState(tutor.endereco ?? "");
+  const [bairro, setBairro] = useState(tutor.bairro ?? "");
   const [pets, setPets] = useState<PetForm[]>(() =>
     petsIniciais.length > 0
       ? petsIniciais.map((p) => ({
@@ -113,6 +114,7 @@ export function CadastroForm({
         nome: nome.trim(),
         telefone: telefone.trim(),
         endereco: endereco.trim() || null,
+        bairro: bairro.trim() || null,
         pets: pets.map(({ chave: _chave, ...p }) => p),
         contatoBuscaEntrega: temContatoBuscaEntrega
           ? { nome: nomeBusca.trim(), telefone: telefoneBusca.trim() }
@@ -130,7 +132,7 @@ export function CadastroForm({
   if (enviado) {
     return (
       <div className="rounded-xl border border-success-100 bg-success-50 px-6 py-8 text-center">
-        <p className="font-display text-lg text-ink-900">Cadastro enviado!</p>
+        <p className={texto.tituloSecao}>Cadastro enviado!</p>
         <p className="mt-2 text-sm text-ink-700">
           Recebemos seus dados. Pode fechar essa página — o petshop já
           consegue ver as informações.
@@ -142,7 +144,7 @@ export function CadastroForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
-        <h2 className="font-display text-lg text-ink-900">Seus dados</h2>
+        <h2 className={texto.tituloSecao}>Seus dados</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Nome" htmlFor="cadastro_nome" full>
             <input
@@ -167,7 +169,16 @@ export function CadastroForm({
               className={inputClass}
               value={endereco}
               onChange={(e) => setEndereco(e.target.value)}
-              placeholder="Rua, número, bairro"
+              placeholder="Rua e número"
+            />
+          </FormField>
+          <FormField label="Bairro" htmlFor="cadastro_bairro">
+            <input
+              id="cadastro_bairro"
+              className={inputClass}
+              value={bairro}
+              onChange={(e) => setBairro(e.target.value)}
+              placeholder="ex.: Centro"
             />
           </FormField>
         </div>
@@ -175,7 +186,7 @@ export function CadastroForm({
 
       <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-ink-900">Seus pets</h2>
+          <h2 className={texto.tituloSecao}>Seus pets</h2>
           <button
             type="button"
             onClick={adicionarPet}

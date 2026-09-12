@@ -159,6 +159,11 @@ export interface Tutor {
   telefone: string;
   email: string | null;
   endereco: string | null;
+  // Migration 0030 — separado do texto livre de endereco, pra permitir
+  // agrupar/filtrar por regiao no futuro. Null = nao informado (tutor de
+  // antes da coluna existir, ou que ainda nao passou pelo formulario com o
+  // campo novo).
+  bairro: string | null;
   cadastro_completo: boolean;
   // Fase 6 — ver supabase/migrations/0006_fase6_pagamentos.sql.
   // forma_pagamento_preferida decide cartão x Pix em processar-cobrancas.

@@ -202,6 +202,7 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
   const [telefone, setTelefone] = useState(tutor.telefone);
   const [email, setEmail] = useState(tutor.email ?? "");
   const [endereco, setEndereco] = useState(tutor.endereco ?? "");
+  const [bairro, setBairro] = useState(tutor.bairro ?? "");
   const [cadastroCompleto, setCadastroCompleto] = useState(tutor.cadastro_completo);
   // Migration 0011 — preferência usada pelo trigger de cobrança (banco) pra
   // já nascer a cobrança marcada. 'local' é o pedido do dono: presencial é
@@ -230,6 +231,7 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
         telefone: telefone.trim(),
         email: email.trim() || null,
         endereco: endereco.trim() || null,
+        bairro: bairro.trim() || null,
         cadastro_completo: cadastroCompleto,
         forma_pagamento_preferida: formaPagamentoPreferida,
       });
@@ -277,6 +279,14 @@ function TutorDadosForm({ tutor }: { tutor: Tutor }) {
             className={inputClass}
             value={endereco}
             onChange={(e) => setEndereco(e.target.value)}
+          />
+        </FormField>
+        <FormField label="Bairro" htmlFor={`tutor_bairro_${tutor.id}`} hint="Opcional.">
+          <input
+            id={`tutor_bairro_${tutor.id}`}
+            className={inputClass}
+            value={bairro}
+            onChange={(e) => setBairro(e.target.value)}
           />
         </FormField>
         <FormField

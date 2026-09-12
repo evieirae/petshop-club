@@ -24,6 +24,8 @@ export type CadastroInput = {
   nome: string;
   telefone: string;
   endereco: string | null;
+  // Migration 0030 — bairro estruturado, separado do texto livre de endereco.
+  bairro: string | null;
   pets: CadastroPetInput[];
   // Contato de quem busca/entrega o pet, quando diferente do proprio tutor
   // (o exemplo motivador da seção 5 de docs/regras_padrao_petshop.md).
@@ -76,6 +78,7 @@ export async function enviarCadastro(
       nome: dados.nome.trim(),
       telefone: dados.telefone.trim(),
       endereco: dados.endereco?.trim() || null,
+      bairro: dados.bairro?.trim() || null,
       cadastro_completo: true,
     })
     .eq("id", tutorId);
