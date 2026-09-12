@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { createClient } from "@/lib/supabase/server";
 import type { Assinatura, ContatoAdicional, Pet, Plano, Porte, Tutor } from "@/types/database";
+import { texto } from "@/lib/ui/styles";
 import { TutoresSection } from "./TutoresSection";
 
 export default async function TutoresPage() {
@@ -53,8 +54,8 @@ export default async function TutoresPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl text-ink-900">Tutores & Pets</h1>
-      <p className="mt-1 text-sm text-ink-500">
+      <h1 className={texto.tituloPagina}>Tutores & Pets</h1>
+      <p className={texto.subtitulo}>
         Cadastro, contatos por papel e link de autopreenchimento — ver
         docs/regras_padrao_petshop.md, seção 6.
       </p>

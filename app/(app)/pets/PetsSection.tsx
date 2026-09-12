@@ -7,7 +7,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import type { Pet, Porte, Tutor } from "@/types/database";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormField, inputClass } from "@/components/ui/FormField";
-import { PetForm } from "../tutores/TutoresSection";
+import { PetForm } from "../tutores/TutorPets";
 import {
   alternarAtivoPet,
   criarPet,
