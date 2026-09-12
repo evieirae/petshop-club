@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { nomeServico, racaDoPet } from "@/lib/agenda/resolver";
-import { botao } from "@/lib/ui/styles";
+import { botao, texto } from "@/lib/ui/styles";
 import type {
   Agendamento,
   CategoriaServico,
@@ -72,7 +72,7 @@ export function PedidosSection({
     <section className="mb-8">
       <div className="mb-3 flex items-center gap-2">
         <Inbox size={18} className="text-cta-700" aria-hidden="true" />
-        <h2 className="font-display text-lg text-ink-900">
+        <h2 className={texto.tituloSecao}>
           Pedidos aguardando resposta
         </h2>
       </div>

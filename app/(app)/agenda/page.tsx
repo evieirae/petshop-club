@@ -12,6 +12,7 @@ import type {
   Servico,
   Tutor,
 } from "@/types/database";
+import { texto } from "@/lib/ui/styles";
 import { AgendaSection } from "./AgendaSection";
 import { PedidosSection } from "./PedidosSection";
 
@@ -150,8 +151,8 @@ export default async function AgendaPage({
 
   return (
     <div>
-      <h1 className="font-display text-2xl text-ink-900">Agenda</h1>
-      <p className="mt-1 text-sm text-ink-500">
+      <h1 className={texto.tituloPagina}>Agenda</h1>
+      <p className={texto.subtitulo}>
         Visitas da semana, confirmações e o fluxo até a entrega do pet.
       </p>
 
