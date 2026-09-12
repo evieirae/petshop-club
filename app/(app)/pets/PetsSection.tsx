@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { botao } from "@/lib/ui/styles";
+import { botao, superficie, texto } from "@/lib/ui/styles";
 import { Badge } from "@/components/ui/Badge";
 import { useState, useTransition, type FormEvent } from "react";
 import type { Pet, Porte, Tutor } from "@/types/database";
@@ -84,6 +84,16 @@ export function PetsSection({
   const inativosCount = pets.length - petsAtivos.length;
   const termoBusca = busca.trim().toLowerCase();
 
+  // KPIs (Fase E do roadmap de identidade visual) — agregação simples sobre
+  // o array já buscado no server, mesmo racional do Painel: "cadastrados"
+  // conta TODOS (ativo e inativo), não só o que os filtros abaixo mostram.
+  const kpis: { label: string; valor: string | number }[] = [
+    { label: "Pets cadastrados", valor: pets.length },
+    { label: "Inativos", valor: inativosCount },
+    { label: "Cachorros", valor: pets.filter((p) => p.especie === "cachorro").length },
+    { label: "Gatos", valor: pets.filter((p) => p.especie === "gato").length },
+  ];
+
   const petsFiltrados = (mostrarInativos ? pets : petsAtivos).filter((pet) => {
     if (termoBusca && !pet.nome.toLowerCase().includes(termoBusca)) return false;
     if (especieFiltro !== "todas" && pet.especie !== especieFiltro) return false;
@@ -114,8 +124,8 @@ export function PetsSection({
     <section>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-xl text-ink-900">Pets</h2>
-          <p className="mt-1 text-sm text-ink-500">
+          <h2 className={texto.tituloSecao}>Pets</h2>
+          <p className={texto.subtitulo}>
             O cadastro começa pelo pet — o tutor é vinculado no mesmo fluxo,
             logo em seguida.
           </p>
@@ -127,6 +137,15 @@ export function PetsSection({
         >
           {cadastrando ? "Cancelar" : "+ Novo Pet"}
         </button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className={superficie.kpi}>
+            <p className="text-xs text-ink-500">{kpi.label}</p>
+            <p className="mt-1 font-mono text-2xl text-ink-900">{kpi.valor}</p>
+          </div>
+        ))}
       </div>
 
       {cadastrando && (
