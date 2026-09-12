@@ -1,6 +1,6 @@
 "use client";
 
-import { alerta, botao } from "@/lib/ui/styles";
+import { alerta, botao, texto } from "@/lib/ui/styles";
 import { Badge } from "@/components/ui/Badge";
 import { StatusBadge } from "@/components/agenda/StatusBadge";
 import {
@@ -179,8 +179,8 @@ export function AgendaSection({
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl text-ink-900">Semana</h2>
-            <p className="mt-1 text-sm text-ink-500">
+            <h2 className={texto.tituloSecao}>Semana</h2>
+            <p className={texto.subtitulo}>
               {formatarDataCurta(inicioSemana)} a {formatarDataCurta(adicionarDias(inicioSemana, 6))}
             </p>
           </div>
@@ -393,8 +393,8 @@ export function AgendaSection({
 
       {pendenciasConfirmacao.length > 0 && (
         <section>
-          <h2 className="font-display text-lg text-ink-900">Confirmações pendentes</h2>
-          <p className="mt-1 text-sm text-ink-500">
+          <h2 className={texto.tituloSecao}>Confirmações pendentes</h2>
+          <p className={texto.subtitulo}>
             Visitas de amanhã que passaram do prazo de confirmação do tutor
             (Fase 5 — lembrete de escalonamento já foi mandado por WhatsApp
             pro petshop também) — vale confirmar direto com o cliente.
@@ -426,8 +426,8 @@ export function AgendaSection({
 
       {tutoresSemAgendamento.length > 0 && (
         <section>
-          <h2 className="font-display text-lg text-ink-900">Sem agendamento ainda</h2>
-          <p className="mt-1 text-sm text-ink-500">
+          <h2 className={texto.tituloSecao}>Sem agendamento ainda</h2>
+          <p className={texto.subtitulo}>
             Tutores cadastrados que nunca tiveram assinatura nem visita avulsa —
             candidatos a um contato pra fechar a primeira visita.
           </p>
