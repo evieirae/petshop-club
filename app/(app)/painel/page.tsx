@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { createClient } from "@/lib/supabase/server";
 import { NavCard } from "@/components/ui/NavCard";
-import { texto } from "@/lib/ui/styles";
+import { superficie, texto } from "@/lib/ui/styles";
 import { adicionarDias, dataLocalDeString, paraDataLocal } from "@/lib/semana";
 import { resolverAgendamento, type ContextoNomes } from "@/lib/agenda/resolver";
 import type {
@@ -163,10 +163,7 @@ export default async function VisaoGeralPage() {
         </p>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {kpis.map((kpi) => (
-            <div
-              key={kpi.label}
-              className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card"
-            >
+            <div key={kpi.label} className={superficie.kpi}>
               <p className="text-xs text-ink-500">{kpi.label}</p>
               <p className="mt-1 font-mono text-2xl text-ink-900">{kpi.valor}</p>
             </div>
