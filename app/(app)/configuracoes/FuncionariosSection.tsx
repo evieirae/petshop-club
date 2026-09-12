@@ -1,6 +1,6 @@
 "use client";
 
-import { botao } from "@/lib/ui/styles";
+import { botao, texto } from "@/lib/ui/styles";
 import { Badge } from "@/components/ui/Badge";
 import { useState, useTransition, type FormEvent } from "react";
 import type { FuncaoFuncionario, Funcionario } from "@/types/database";
@@ -61,7 +61,7 @@ export function FuncionariosSection({
             6
           </span>
           <div>
-            <h2 className="font-display text-lg text-ink-900">Funcionários</h2>
+            <h2 className={texto.tituloSecao}>Funcionários</h2>
             <p className="mt-0.5 text-sm text-ink-500">
               Quem trabalha no petshop, pra aparecer como vendedor numa venda e
               como responsável por um banho ou tosa. Isso não cria login — é só
