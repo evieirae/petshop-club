@@ -3,6 +3,7 @@ import { getUsuarioContext } from "@/lib/auth/getContext";
 import { getAdminContext } from "@/lib/auth/getAdminContext";
 import { createClient } from "@/lib/supabase/server";
 import type { Funcionario } from "@/types/database";
+import { texto } from "@/lib/ui/styles";
 import { ConfiguracoesForm } from "./ConfiguracoesForm";
 import { FuncionariosSection } from "./FuncionariosSection";
 
@@ -34,8 +35,8 @@ export default async function ConfiguracoesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl text-ink-900">Configurações</h1>
-      <p className="mt-1 text-sm text-ink-500">
+      <h1 className={texto.tituloPagina}>Configurações</h1>
+      <p className={texto.subtitulo}>
         Tudo que varia de petshop pra petshop — ver docs/regras_padrao_petshop.md.
       </p>
 
