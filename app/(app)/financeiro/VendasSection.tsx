@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/Badge";
-import type { TomBadge } from "@/lib/ui/styles";
+import { texto, type TomBadge } from "@/lib/ui/styles";
 import { useState } from "react";
 import type { FormaPagamento, StatusVenda } from "@/types/database";
 
@@ -86,8 +86,8 @@ export function VendasSection({
     <section className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl text-ink-900">Vendas de produtos</h2>
-          <p className="mt-1 text-sm text-ink-500">
+          <h2 className={texto.tituloSecao}>Vendas de produtos</h2>
+          <p className={texto.subtitulo}>
             Clique numa venda pra ver o que foi vendido.
           </p>
         </div>

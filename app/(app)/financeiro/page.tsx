@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import type { TomBadge } from "@/lib/ui/styles";
+import { botao, texto, type TomBadge } from "@/lib/ui/styles";
 import { redirect } from "next/navigation";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { createClient } from "@/lib/supabase/server";
+import { adicionarDias, paraDataLocal } from "@/lib/semana";
 import type {
   Cobranca,
   CobrancaAvulsa,
@@ -12,6 +14,8 @@ import type {
 } from "@/types/database";
 import { PagamentoLocalBotao } from "./PagamentoLocalBotao";
 import { VendasSection, type LinhaVenda } from "./VendasSection";
+import { GraficoFaturamento, type PontoFaturamento } from "./GraficoFaturamento";
+import { GraficoStatusCobrancas, type FatiaStatus } from "./GraficoStatusCobrancas";
 
 // Fase 6 (docs/fase6_pagamentos.md, seção 12) — visão do petshop sobre o
 // próprio dinheiro: cobranças do mês (assinatura + avulsa) com bruto,
@@ -79,9 +83,26 @@ type LinhaCobranca = {
   valorPetshop: number;
   status: StatusCobranca;
   formaPagamento: string | null;
+  // Só pro gráfico de faturamento por dia (page.tsx) — `data` acima é a
+  // competência/dia de CRIAÇÃO da cobrança, não o dia em que o dinheiro
+  // efetivamente caiu. null enquanto não paga.
+  pagoEm: string | null;
 };
 
-export default async function FinanceiroPage() {
+// Fase D do roadmap de identidade visual (retema + filtro de período) —
+// ?mes=YYYY-MM escolhe a competência exibida; sem parâmetro, cai no mês
+// corrente. Mesmo padrão de app/(app)/agenda/page.tsx (?data=), só que aqui
+// a navegação é por mês, não por dia — sem mecanismo de fetch novo, o
+// Server Component já busca de novo com o range certo a cada clique.
+function mesParaParam(ano: number, mes: number): string {
+  return `${ano}-${String(mes).padStart(2, "0")}`;
+}
+
+export default async function FinanceiroPage({
+  searchParams,
+}: {
+  searchParams?: { mes?: string };
+}) {
   const contexto = await getUsuarioContext();
 
   if (!contexto?.petshop?.id) {
@@ -90,13 +111,31 @@ export default async function FinanceiroPage() {
 
   const supabase = createClient();
 
-  const inicioMes = new Date();
-  inicioMes.setDate(1);
-  const competenciaAtual = inicioMes.toISOString().slice(0, 10);
+  const agora = new Date();
+  const anoAtual = agora.getFullYear();
+  const mesAtual = agora.getMonth() + 1; // 1-12
 
-  const inicioProximoMes = new Date(inicioMes);
-  inicioProximoMes.setMonth(inicioProximoMes.getMonth() + 1);
-  const proximaCompetencia = inicioProximoMes.toISOString().slice(0, 10);
+  const mesParam = searchParams?.mes;
+  const mesParamValido = mesParam && /^\d{4}-(0[1-9]|1[0-2])$/.test(mesParam);
+  const [ano, mes] = mesParamValido
+    ? mesParam.split("-").map(Number)
+    : [anoAtual, mesAtual];
+
+  // Dates em componentes LOCAIS (mesma cautela de lib/semana.ts e
+  // app/(app)/painel/page.tsx — UTC desloca o dia à noite no fuso do
+  // Brasil): construídas com dia fixo, nunca .toISOString().slice(0,10)
+  // sobre "agora" (que carrega a hora atual e pode virar o dia ao converter
+  // pra UTC à noite).
+  const inicioMes = new Date(ano, mes - 1, 1);
+  const inicioProximoMes = new Date(ano, mes, 1);
+  const competenciaAtual = paraDataLocal(inicioMes);
+  const proximaCompetencia = paraDataLocal(inicioProximoMes);
+
+  const ehMesAtual = ano === anoAtual && mes === mesAtual;
+  const mesAnterior = mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 };
+  const mesSeguinte = mes === 12 ? { ano: ano + 1, mes: 1 } : { ano, mes: mes + 1 };
+  const nomeMesAno = inicioMes.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const nomeMesAnoCapitalizado = nomeMesAno.charAt(0).toUpperCase() + nomeMesAno.slice(1);
 
   const [{ data: cobrancas }, { data: avulsas }, { data: mensalidades }, { data: vendas }] =
     await Promise.all([
@@ -195,6 +234,7 @@ export default async function FinanceiroPage() {
         valorPetshop: c.valor_petshop,
         status: c.status,
         formaPagamento: c.forma_pagamento,
+        pagoEm: c.pago_em,
       })
     ),
     ...((avulsas ?? []) as unknown as (CobrancaAvulsa & { tutores: { nome: string } | null })[]).map((c) => ({
@@ -208,6 +248,7 @@ export default async function FinanceiroPage() {
       valorPetshop: c.valor_petshop,
       status: c.status,
       formaPagamento: c.forma_pagamento,
+      pagoEm: c.pago_em,
     })),
   ].sort((a, b) => (a.data < b.data ? 1 : -1));
 
@@ -223,18 +264,85 @@ export default async function FinanceiroPage() {
   const totalTaxaPlataforma = linhas.reduce((soma, l) => soma + l.valorPercentual, 0);
   const inadimplentes = linhas.filter((l) => l.status === "falhou");
 
+  // KPIs novos (Fase D do roadmap de identidade visual) — agregação simples
+  // sobre `linhas`, já buscado acima; nenhuma query nova.
+  const ticketMedio = linhas.length > 0 ? totalServicos / linhas.length : null;
+  const taxaInadimplencia =
+    linhas.length > 0 ? Math.round((inadimplentes.length / linhas.length) * 100) : null;
+
+  // Gráfico de barras "faturamento por dia" — só cobrança PAGA entra (é
+  // dinheiro que de fato caiu), bucketada pelo dia real do pagamento
+  // (pagoEm), não pela competência/criação. Preenche todo dia do mês, mesmo
+  // sem cobrança, pra a barra não "pular" dia.
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const valorPorDia = new Map<string, number>();
+  for (const linha of linhas) {
+    if (linha.status !== "pago" || !linha.pagoEm) continue;
+    const diaISO = paraDataLocal(new Date(linha.pagoEm));
+    valorPorDia.set(diaISO, (valorPorDia.get(diaISO) ?? 0) + linha.valorTotal);
+  }
+  const pontosFaturamento: PontoFaturamento[] = Array.from({ length: diasNoMes }, (_, i) => {
+    const diaISO = adicionarDias(competenciaAtual, i);
+    return { diaISO, valor: valorPorDia.get(diaISO) ?? 0 };
+  });
+
+  // Gráfico de rosca "cobranças por status" — reusa exatamente o mesmo
+  // LABEL_STATUS/TOM_STATUS da tabela abaixo, então a cor de cada fatia é a
+  // cor do badge daquele status. Ordem fixa (não por quantidade) pra a
+  // legenda não pular de posição de um mês pro outro.
+  const ORDEM_STATUS: StatusCobranca[] = [
+    "pago",
+    "aguardando_pagamento",
+    "processando",
+    "pendente",
+    "falhou",
+    "estornado",
+    "isento",
+  ];
+  const contagemPorStatus: FatiaStatus[] = ORDEM_STATUS.map((status) => ({
+    status,
+    quantidade: linhas.filter((l) => l.status === status).length,
+    tom: TOM_STATUS[status],
+    label: LABEL_STATUS[status],
+  })).filter((f) => f.quantidade > 0);
+
   const mensalidade = mensalidades as MensalidadePetshop | null;
 
   return (
     <div>
-      <h1 className="font-display text-2xl text-ink-900">Financeiro</h1>
-      <p className="mt-1 text-sm text-ink-500">
-        Cobranças do mês — ver docs/fase6_pagamentos.md, seção 12. O
+      <h1 className={texto.tituloPagina}>Financeiro</h1>
+      <p className={texto.subtitulo}>
+        Cobranças do período — ver docs/fase6_pagamentos.md, seção 12. O
         petshop recebe sempre o valor cheio do serviço; a taxa de serviço é
         cobrada à parte, do tutor (seção 1c).
       </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={`/financeiro?mes=${mesParaParam(mesAnterior.ano, mesAnterior.mes)}`}
+          className={botao({ variante: "neutra", tamanho: "sm" })}
+        >
+          ‹ Mês anterior
+        </Link>
+        <p className={texto.tituloSecao}>{nomeMesAnoCapitalizado}</p>
+        <div className="flex items-center gap-2">
+          {!ehMesAtual && (
+            <>
+              <Link href="/financeiro" className={botao({ variante: "neutra", tamanho: "sm" })}>
+                Mês atual
+              </Link>
+              <Link
+                href={`/financeiro?mes=${mesParaParam(mesSeguinte.ano, mesSeguinte.mes)}`}
+                className={botao({ variante: "neutra", tamanho: "sm" })}
+              >
+                Mês seguinte ›
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
           <p className="text-xs text-ink-500">Valor dos serviços do mês</p>
           <p className="mt-1 font-mono text-xl text-success-700">{formatarPreco(totalServicos)}</p>
@@ -244,6 +352,20 @@ export default async function FinanceiroPage() {
           <p className="text-xs text-ink-500">Taxa de serviço cobrada dos tutores</p>
           <p className="mt-1 font-mono text-xl text-ink-900">{formatarPreco(totalTaxaPlataforma)}</p>
           <p className="mt-1 text-xs text-ink-500">Receita da plataforma — não sai do seu valor.</p>
+        </div>
+        <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
+          <p className="text-xs text-ink-500">Ticket médio</p>
+          <p className="mt-1 font-mono text-xl text-ink-900">
+            {ticketMedio === null ? "—" : formatarPreco(ticketMedio)}
+          </p>
+          <p className="mt-1 text-xs text-ink-500">Valor médio por cobrança (assinatura + avulsa).</p>
+        </div>
+        <div className="rounded-xl border border-surface-border bg-surface-card p-5 shadow-card">
+          <p className="text-xs text-ink-500">Taxa de inadimplência</p>
+          <p className="mt-1 font-mono text-xl text-ink-900">
+            {taxaInadimplencia === null ? "—" : `${taxaInadimplencia}%`}
+          </p>
+          <p className="mt-1 text-xs text-ink-500">Cobranças com falha definitiva sobre o total do período.</p>
         </div>
       </div>
 
@@ -272,6 +394,17 @@ export default async function FinanceiroPage() {
           </p>
         </div>
       )}
+
+      <section className="mt-10">
+        <h2 className={texto.tituloSecao}>Faturamento e cobranças</h2>
+        <p className={texto.subtitulo}>
+          Serviços pagos ao longo do período e a distribuição das cobranças por status.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <GraficoFaturamento pontos={pontosFaturamento} />
+          <GraficoStatusCobrancas fatias={contagemPorStatus} total={linhas.length} />
+        </div>
+      </section>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-surface-border bg-surface-card">
         <table className="w-full text-sm">
@@ -324,8 +457,8 @@ export default async function FinanceiroPage() {
 
       {contexto.petshop.comissao_ativa && (
         <section className="mt-10">
-          <h2 className="font-display text-xl text-ink-900">Comissões do mês</h2>
-          <p className="mt-1 text-sm text-ink-500">
+          <h2 className={texto.tituloSecao}>Comissões do mês</h2>
+          <p className={texto.subtitulo}>
             Venda usa o percentual congelado em cada venda; serviço usa o
             percentual de hoje, sobre visitas marcadas como entregues. Configurar
             quem ganha quanto é em Configurações.
