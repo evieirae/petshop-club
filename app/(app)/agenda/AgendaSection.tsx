@@ -174,27 +174,34 @@ export function AgendaSection({
   // usava, só trocando o passo (dia/semana/mês) e preservando `visao` na
   // URL. As abas Mês/Semana/Dia (seção 3 do plano) reaproveitam esse mesmo
   // mecanismo: só trocam `visao`, mantendo `data`.
-  // Visão Dia (Fase 6) ainda não existe — só Mês e Semana por enquanto.
-  const tituloVisao = visao === "mes" ? "Mês" : "Semana";
+  const tituloVisao = visao === "mes" ? "Mês" : visao === "dia" ? "Dia" : "Semana";
   const subtituloVisao =
     visao === "mes"
       ? dataLocalDeString(mesReferencia).toLocaleDateString("pt-BR", {
           month: "long",
           year: "numeric",
         })
-      : `${formatarDataCurta(inicioSemana)} a ${formatarDataCurta(adicionarDias(inicioSemana, 6))}`;
+      : visao === "dia"
+        ? `${nomeDiaSemana(diaSelecionado)}, ${formatarDataCurta(diaSelecionado)}`
+        : `${formatarDataCurta(inicioSemana)} a ${formatarDataCurta(adicionarDias(inicioSemana, 6))}`;
 
   const hrefAnterior =
     visao === "mes"
       ? `/agenda?data=${adicionarMeses(diaSelecionado, -1)}&visao=mes`
-      : `/agenda?data=${adicionarDias(inicioSemana, -7)}`;
-  const hrefHoje = visao === "mes" ? "/agenda?visao=mes" : "/agenda";
+      : visao === "dia"
+        ? `/agenda?data=${adicionarDias(diaSelecionado, -1)}&visao=dia`
+        : `/agenda?data=${adicionarDias(inicioSemana, -7)}`;
+  const hrefHoje = visao === "semana" ? "/agenda" : `/agenda?visao=${visao}`;
   const hrefSeguinte =
     visao === "mes"
       ? `/agenda?data=${adicionarMeses(diaSelecionado, 1)}&visao=mes`
-      : `/agenda?data=${adicionarDias(inicioSemana, 7)}`;
-  const rotuloAnterior = visao === "mes" ? "‹ Mês anterior" : "‹ Semana anterior";
-  const rotuloSeguinte = visao === "mes" ? "Mês seguinte ›" : "Semana seguinte ›";
+      : visao === "dia"
+        ? `/agenda?data=${adicionarDias(diaSelecionado, 1)}&visao=dia`
+        : `/agenda?data=${adicionarDias(inicioSemana, 7)}`;
+  const rotuloAnterior =
+    visao === "mes" ? "‹ Mês anterior" : visao === "dia" ? "‹ Dia anterior" : "‹ Semana anterior";
+  const rotuloSeguinte =
+    visao === "mes" ? "Mês seguinte ›" : visao === "dia" ? "Dia seguinte ›" : "Semana seguinte ›";
 
   return (
     <FuncionariosContext.Provider value={funcionarios}>
@@ -208,7 +215,7 @@ export function AgendaSection({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1 rounded-lg border border-surface-border bg-surface-muted p-1">
-              {(["mes", "semana"] as const).map((v) => (
+              {(["mes", "semana", "dia"] as const).map((v) => (
                 <Link
                   key={v}
                   href={`/agenda?data=${diaSelecionado}&visao=${v}`}
@@ -218,7 +225,7 @@ export function AgendaSection({
                       : "text-ink-500 hover:text-ink-900"
                   }`}
                 >
-                  {v === "mes" ? "Mês" : "Semana"}
+                  {v === "mes" ? "Mês" : v === "semana" ? "Semana" : "Dia"}
                 </Link>
               ))}
             </div>
@@ -287,7 +294,7 @@ export function AgendaSection({
           />
         ) : (
           <GradeHorarios
-            dias={dias}
+            dias={visao === "dia" ? [diaSelecionado] : dias}
             horarios={horarios}
             passoMinutos={passoMinutos}
             resolvidos={resolvidos}
