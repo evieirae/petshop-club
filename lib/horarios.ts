@@ -18,15 +18,30 @@ export type ExpedientePetshop = {
   intervalo_agendamento_minutos: number;
 };
 
-function paraMinutos(horario: string): number {
+// Exportadas (não só internas ao gerador) porque a Fase 3 do plano de
+// refatoração visual da Agenda (docs/plano-calendario-agenda-reui.md)
+// precisa da mesma conversão "HH:MM" <-> minutos pra posicionar cada
+// agendamento na grade contínua — evita reimplementar o parsing em
+// GradeHorarios.tsx.
+export function paraMinutos(horario: string): number {
   const [hora, minuto] = horario.split(":").map(Number);
   return hora * 60 + minuto;
 }
 
-function paraHorario(minutos: number): string {
+export function paraHorario(minutos: number): string {
   const hora = Math.floor(minutos / 60);
   const minuto = minutos % 60;
   return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
+}
+
+/** Duração de cada slot da grade, em minutos — mesmo fallback (60min) que
+ *  gerarHorariosDisponiveis já usava internamente. Exportada porque a
+ *  grade contínua da Agenda (Fase 3) precisa do mesmo número pra calcular
+ *  a altura de cada bloco de agendamento. */
+export function passoAgendamento(expediente: ExpedientePetshop): number {
+  return expediente.intervalo_agendamento_minutos > 0
+    ? expediente.intervalo_agendamento_minutos
+    : 60;
 }
 
 /**
@@ -38,9 +53,7 @@ function paraHorario(minutos: number): string {
 export function gerarHorariosDisponiveis(expediente: ExpedientePetshop): string[] {
   const abertura = paraMinutos(expediente.hora_abertura);
   const fechamento = paraMinutos(expediente.hora_fechamento);
-  const passo = expediente.intervalo_agendamento_minutos > 0
-    ? expediente.intervalo_agendamento_minutos
-    : 60;
+  const passo = passoAgendamento(expediente);
 
   if (fechamento <= abertura) return [];
 
