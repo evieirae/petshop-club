@@ -3,6 +3,7 @@
 import { tomCores } from "@/lib/ui/styles";
 import { formatarDataCurta, nomeDiaSemana } from "@/lib/semana";
 import { paraHorario, paraMinutos } from "@/lib/horarios";
+import { layoutColunas } from "@/lib/agenda/layoutColunas";
 import {
   dataLocalDoISO,
   horarioLocal,
@@ -27,10 +28,10 @@ import {
 const ALTURA_HORA_PX = 56;
 const PX_POR_MINUTO = ALTURA_HORA_PX / 60;
 
-// Alocação de colunas pra agendamentos que se sobrepõem no mesmo dia — ver
-// seção 4 do plano. Fica local aqui na Fase 3 (grade ainda não existia, não
-// tinha o que isolar); a Fase 4 extrai isto pra lib/agenda/layoutColunas.ts
-// como função pura testável, sem mudar o resultado visual.
+// Alocação de colunas pra agendamentos que se sobrepõem no mesmo dia (seção
+// 4 do plano) — a função pura em si vive em lib/agenda/layoutColunas.ts
+// desde a Fase 4; aqui só junta o resultado de volta com o
+// AgendamentoResolvido de cada evento pra poder renderizar.
 type EventoComColuna = {
   resolvido: AgendamentoResolvido;
   inicioMinutos: number;
@@ -42,48 +43,28 @@ function alocarColunas(
   itensDoDia: AgendamentoResolvido[],
   passoMinutos: number
 ): EventoComColuna[] {
-  const comHorario = itensDoDia
-    .map((resolvido) => ({
-      resolvido,
-      inicioMinutos: paraMinutos(horarioLocal(resolvido.agendamento.data_hora)),
+  const porId = new Map(itensDoDia.map((r) => [r.agendamento.id, r]));
+  const inicioPorId = new Map(
+    itensDoDia.map((r) => [
+      r.agendamento.id,
+      paraMinutos(horarioLocal(r.agendamento.data_hora)),
+    ])
+  );
+
+  const alocacao = layoutColunas(
+    itensDoDia.map((r) => ({
+      id: r.agendamento.id,
+      inicioMinutos: inicioPorId.get(r.agendamento.id)!,
+      duracaoMinutos: passoMinutos,
     }))
-    .sort((a, b) => a.inicioMinutos - b.inicioMinutos);
+  );
 
-  const resultado: EventoComColuna[] = [];
-  let cluster: typeof comHorario = [];
-  let fimCluster = -Infinity;
-
-  const fecharCluster = () => {
-    if (cluster.length === 0) return;
-    const fimPorColuna: number[] = [];
-    for (const item of cluster) {
-      let coluna = fimPorColuna.findIndex((fim) => fim <= item.inicioMinutos);
-      if (coluna === -1) {
-        coluna = fimPorColuna.length;
-        fimPorColuna.push(item.inicioMinutos + passoMinutos);
-      } else {
-        fimPorColuna[coluna] = item.inicioMinutos + passoMinutos;
-      }
-      resultado.push({ ...item, coluna, totalColunas: -1 });
-    }
-    // totalColunas só é conhecido depois que o cluster inteiro foi alocado.
-    const totalColunas = fimPorColuna.length;
-    for (let i = resultado.length - cluster.length; i < resultado.length; i++) {
-      resultado[i].totalColunas = totalColunas;
-    }
-    cluster = [];
-  };
-
-  for (const item of comHorario) {
-    if (cluster.length > 0 && item.inicioMinutos >= fimCluster) {
-      fecharCluster();
-    }
-    cluster.push(item);
-    fimCluster = Math.max(fimCluster, item.inicioMinutos + passoMinutos);
-  }
-  fecharCluster();
-
-  return resultado;
+  return alocacao.map(({ id, coluna, totalColunas }) => ({
+    resolvido: porId.get(id)!,
+    inicioMinutos: inicioPorId.get(id)!,
+    coluna,
+    totalColunas,
+  }));
 }
 
 export function GradeHorarios({
