@@ -20,7 +20,7 @@ import type {
   Tutor,
 } from "@/types/database";
 import { FormField, inputClass } from "@/components/ui/FormField";
-import { gerarHorariosDisponiveis, type ExpedientePetshop } from "@/lib/horarios";
+import { gerarHorariosDisponiveis, passoAgendamento, type ExpedientePetshop } from "@/lib/horarios";
 import {
   adicionarDias,
   diasDaSemana,
@@ -55,7 +55,7 @@ import {
   voltarStatusAgendamento,
   type ActionResult,
 } from "./actions";
-import { SemanaQuadro } from "./SemanaQuadro";
+import { GradeHorarios } from "./GradeHorarios";
 
 // horarioLocal, dataLocalDoISO, racaDoPet, formatarHorario, TERMINAIS,
 // TOM_STATUS, ContextoNomes, AgendamentoResolvido e resolverAgendamento
@@ -151,17 +151,7 @@ export function AgendaSection({
     .map((r) => horarioLocal(r.agendamento.data_hora))
     .filter((h) => !horariosGrade.includes(h));
   const horarios = Array.from(new Set([...horariosGrade, ...horariosExtras])).sort();
-
-  // dia -> horario -> visitas naquela célula.
-  const grade = new Map<string, Map<string, AgendamentoResolvido[]>>();
-  for (const r of resolvidos) {
-    const dia = dataLocalDoISO(r.agendamento.data_hora);
-    const horario = horarioLocal(r.agendamento.data_hora);
-    if (!grade.has(dia)) grade.set(dia, new Map());
-    const porHorario = grade.get(dia)!;
-    if (!porHorario.has(horario)) porHorario.set(horario, []);
-    porHorario.get(horario)!.push(r);
-  }
+  const passoMinutos = passoAgendamento(expediente);
 
   const selecionado = selecionadoId
     ? resolvidos.find((r) => r.agendamento.id === selecionadoId)
@@ -236,10 +226,11 @@ export function AgendaSection({
           </div>
         )}
 
-        <SemanaQuadro
+        <GradeHorarios
           dias={dias}
           horarios={horarios}
-          grade={grade}
+          passoMinutos={passoMinutos}
+          resolvidos={resolvidos}
           hoje={hoje}
           selecionadoId={selecionadoId}
           onSelecionar={(id) =>
