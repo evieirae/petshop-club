@@ -59,6 +59,7 @@ import {
   voltarStatusAgendamento,
   type ActionResult,
 } from "./actions";
+import { FaixaDias } from "./FaixaDias";
 import { GradeHorarios } from "./GradeHorarios";
 import { MesGrade } from "./MesGrade";
 
@@ -168,6 +169,13 @@ export function AgendaSection({
   const visitasDoDia = resolvidos
     .filter((r) => dataLocalDoISO(r.agendamento.data_hora) === diaSelecionado)
     .sort((a, b) => a.agendamento.data_hora.localeCompare(b.agendamento.data_hora));
+
+  // Fase 7 — ponto (FaixaDias.tsx) indicando "tem visita nesse dia", só
+  // pra quem já está dentro do intervalo buscado (semana ou mês corrente,
+  // ver seção 2 do plano); dia de mês vizinho na faixa nunca acende.
+  const diasComAgendamento = new Set(
+    resolvidos.map((r) => dataLocalDoISO(r.agendamento.data_hora))
+  );
 
   // Título, período e navegação prev/hoje/próximo adaptam a granularidade
   // pela visão ativa — mesmo mecanismo de <Link> que "Semana anterior" já
@@ -281,20 +289,11 @@ export function AgendaSection({
           </div>
         )}
 
-        {visao === "mes" ? (
-          <MesGrade
-            mesReferencia={mesReferencia}
-            resolvidos={resolvidos}
-            hoje={hoje}
-            diaSelecionado={diaSelecionado}
-            selecionadoId={selecionadoId}
-            onSelecionar={(id) =>
-              setSelecionadoId((atual) => (atual === id ? null : id))
-            }
-          />
-        ) : (
+        {visao === "dia" ? (
+          // Visão Dia já é uma coluna só — funciona em qualquer largura,
+          // sem precisar do colapso mobile da Fase 7 (seção 7 do plano).
           <GradeHorarios
-            dias={visao === "dia" ? [diaSelecionado] : dias}
+            dias={[diaSelecionado]}
             horarios={horarios}
             passoMinutos={passoMinutos}
             resolvidos={resolvidos}
@@ -305,6 +304,49 @@ export function AgendaSection({
             }
             onNovo={(dia, horario) => setFormularioAvulsa({ data: dia, horario })}
           />
+        ) : (
+          <>
+            {/* Desktop: grade/mês inteiros. Abaixo do breakpoint mobile
+                (Fase 7), isto some e dá lugar à faixa de dias — CSS
+                responsivo, sem detecção de user-agent. */}
+            <div className="hidden md:block">
+              {visao === "mes" ? (
+                <MesGrade
+                  mesReferencia={mesReferencia}
+                  resolvidos={resolvidos}
+                  hoje={hoje}
+                  diaSelecionado={diaSelecionado}
+                  selecionadoId={selecionadoId}
+                  onSelecionar={(id) =>
+                    setSelecionadoId((atual) => (atual === id ? null : id))
+                  }
+                />
+              ) : (
+                <GradeHorarios
+                  dias={dias}
+                  horarios={horarios}
+                  passoMinutos={passoMinutos}
+                  resolvidos={resolvidos}
+                  hoje={hoje}
+                  selecionadoId={selecionadoId}
+                  onSelecionar={(id) =>
+                    setSelecionadoId((atual) => (atual === id ? null : id))
+                  }
+                  onNovo={(dia, horario) => setFormularioAvulsa({ data: dia, horario })}
+                />
+              )}
+            </div>
+
+            <div className="mt-4 md:hidden">
+              <FaixaDias
+                dias={dias}
+                diaSelecionado={diaSelecionado}
+                hoje={hoje}
+                visao={visao}
+                temAgendamento={(dia) => diasComAgendamento.has(dia)}
+              />
+            </div>
+          </>
         )}
 
         {/*
