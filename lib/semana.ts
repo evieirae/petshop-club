@@ -34,6 +34,19 @@ export function diasDaSemana(inicioISO: string): string[] {
   return Array.from({ length: 7 }, (_, i) => adicionarDias(inicioISO, i));
 }
 
+// Usados pela visão Mês (Fase 1 de docs/plano-calendario-agenda-reui.md) pra
+// montar o range de busca — mesma disciplina de Date local, nunca
+// toISOString().slice(0,10).
+export function inicioDoMes(dataISO: string): string {
+  const d = dataLocalDeString(dataISO);
+  return paraDataLocal(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+export function inicioDoMesSeguinte(dataISO: string): string {
+  const d = dataLocalDeString(dataISO);
+  return paraDataLocal(new Date(d.getFullYear(), d.getMonth() + 1, 1));
+}
+
 export const NOMES_DIA_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export function nomeDiaSemana(dataISO: string): string {
