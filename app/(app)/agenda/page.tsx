@@ -8,6 +8,7 @@ import {
   inicioDoMes,
   inicioDoMesSeguinte,
   paraDataLocal,
+  type Visao,
 } from "@/lib/semana";
 import type {
   Agendamento,
@@ -24,12 +25,10 @@ import { AgendaSection } from "./AgendaSection";
 import { PedidosSection } from "./PedidosSection";
 
 // Fase 1 de docs/plano-calendario-agenda-reui.md — a visão (Mês/Semana/Dia)
-// vira parâmetro de URL, do mesmo jeito que `data` já é hoje. Ainda não
-// existe UI pra trocar de visão nem pra Mês/Dia (isso são as fases
-// seguintes); isto só garante que a busca já traz o intervalo certo pra
-// cada uma, sem mudar o comportamento quando `visao` está ausente.
-type Visao = "mes" | "semana" | "dia";
-
+// vira parâmetro de URL, do mesmo jeito que `data` já é hoje (tipo `Visao`
+// compartilhado com AgendaSection.tsx via lib/semana.ts). A partir da Fase
+// 5 já existe UI pra trocar de visão e telas de Mês/Dia — esta função só
+// garante que a busca traz o intervalo certo pra cada uma.
 export default async function AgendaPage({
   searchParams,
 }: {
@@ -197,6 +196,7 @@ export default async function AgendaPage({
         <AgendaSection
           petshopId={petshopId}
           expediente={expediente}
+          visao={visao}
           diaSelecionado={diaSelecionado}
           inicioSemana={inicioSemana}
           agendamentosSemana={(agendamentosPeriodo as Agendamento[]) ?? []}

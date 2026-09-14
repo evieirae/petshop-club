@@ -23,10 +23,14 @@ import { FormField, inputClass } from "@/components/ui/FormField";
 import { gerarHorariosDisponiveis, passoAgendamento, type ExpedientePetshop } from "@/lib/horarios";
 import {
   adicionarDias,
+  adicionarMeses,
+  dataLocalDeString,
   diasDaSemana,
   formatarDataCurta,
+  inicioDoMes,
   nomeDiaSemana,
   paraDataLocal,
+  type Visao,
 } from "@/lib/semana";
 import {
   type AgendamentoResolvido,
@@ -56,6 +60,7 @@ import {
   type ActionResult,
 } from "./actions";
 import { GradeHorarios } from "./GradeHorarios";
+import { MesGrade } from "./MesGrade";
 
 // horarioLocal, dataLocalDoISO, racaDoPet, formatarHorario, TERMINAIS,
 // TOM_STATUS, ContextoNomes, AgendamentoResolvido e resolverAgendamento
@@ -103,6 +108,7 @@ const HistoricoFaltaContext = createContext<MapaHistoricoFalta>({});
 export function AgendaSection({
   petshopId,
   expediente,
+  visao,
   diaSelecionado,
   inicioSemana,
   agendamentosSemana,
@@ -119,6 +125,7 @@ export function AgendaSection({
 }: {
   petshopId: string;
   expediente: ExpedientePetshop;
+  visao: Visao;
   diaSelecionado: string;
   inicioSemana: string;
   agendamentosSemana: Agendamento[];
@@ -152,6 +159,7 @@ export function AgendaSection({
     .filter((h) => !horariosGrade.includes(h));
   const horarios = Array.from(new Set([...horariosGrade, ...horariosExtras])).sort();
   const passoMinutos = passoAgendamento(expediente);
+  const mesReferencia = inicioDoMes(diaSelecionado);
 
   const selecionado = selecionadoId
     ? resolvidos.find((r) => r.agendamento.id === selecionadoId)
@@ -161,6 +169,33 @@ export function AgendaSection({
     .filter((r) => dataLocalDoISO(r.agendamento.data_hora) === diaSelecionado)
     .sort((a, b) => a.agendamento.data_hora.localeCompare(b.agendamento.data_hora));
 
+  // Título, período e navegação prev/hoje/próximo adaptam a granularidade
+  // pela visão ativa — mesmo mecanismo de <Link> que "Semana anterior" já
+  // usava, só trocando o passo (dia/semana/mês) e preservando `visao` na
+  // URL. As abas Mês/Semana/Dia (seção 3 do plano) reaproveitam esse mesmo
+  // mecanismo: só trocam `visao`, mantendo `data`.
+  // Visão Dia (Fase 6) ainda não existe — só Mês e Semana por enquanto.
+  const tituloVisao = visao === "mes" ? "Mês" : "Semana";
+  const subtituloVisao =
+    visao === "mes"
+      ? dataLocalDeString(mesReferencia).toLocaleDateString("pt-BR", {
+          month: "long",
+          year: "numeric",
+        })
+      : `${formatarDataCurta(inicioSemana)} a ${formatarDataCurta(adicionarDias(inicioSemana, 6))}`;
+
+  const hrefAnterior =
+    visao === "mes"
+      ? `/agenda?data=${adicionarMeses(diaSelecionado, -1)}&visao=mes`
+      : `/agenda?data=${adicionarDias(inicioSemana, -7)}`;
+  const hrefHoje = visao === "mes" ? "/agenda?visao=mes" : "/agenda";
+  const hrefSeguinte =
+    visao === "mes"
+      ? `/agenda?data=${adicionarMeses(diaSelecionado, 1)}&visao=mes`
+      : `/agenda?data=${adicionarDias(inicioSemana, 7)}`;
+  const rotuloAnterior = visao === "mes" ? "‹ Mês anterior" : "‹ Semana anterior";
+  const rotuloSeguinte = visao === "mes" ? "Mês seguinte ›" : "Semana seguinte ›";
+
   return (
     <FuncionariosContext.Provider value={funcionarios}>
       <HistoricoFaltaContext.Provider value={historicoFalta}>
@@ -168,29 +203,42 @@ export function AgendaSection({
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className={texto.tituloSecao}>Semana</h2>
-            <p className={texto.subtitulo}>
-              {formatarDataCurta(inicioSemana)} a {formatarDataCurta(adicionarDias(inicioSemana, 6))}
-            </p>
+            <h2 className={texto.tituloSecao}>{tituloVisao}</h2>
+            <p className={`${texto.subtitulo} capitalize`}>{subtituloVisao}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-surface-border bg-surface-muted p-1">
+              {(["mes", "semana"] as const).map((v) => (
+                <Link
+                  key={v}
+                  href={`/agenda?data=${diaSelecionado}&visao=${v}`}
+                  className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                    visao === v
+                      ? "bg-surface-card text-ink-900 shadow-card"
+                      : "text-ink-500 hover:text-ink-900"
+                  }`}
+                >
+                  {v === "mes" ? "Mês" : "Semana"}
+                </Link>
+              ))}
+            </div>
             <Link
-              href={`/agenda?data=${adicionarDias(inicioSemana, -7)}`}
+              href={hrefAnterior}
               className={botao({ variante: "neutra", tamanho: "sm" })}
             >
-              ‹ Semana anterior
+              {rotuloAnterior}
             </Link>
             <Link
-              href="/agenda"
+              href={hrefHoje}
               className={botao({ variante: "neutra", tamanho: "sm" })}
             >
               Hoje
             </Link>
             <Link
-              href={`/agenda?data=${adicionarDias(inicioSemana, 7)}`}
+              href={hrefSeguinte}
               className={botao({ variante: "neutra", tamanho: "sm" })}
             >
-              Semana seguinte ›
+              {rotuloSeguinte}
             </Link>
             <button
               type="button"
@@ -226,18 +274,31 @@ export function AgendaSection({
           </div>
         )}
 
-        <GradeHorarios
-          dias={dias}
-          horarios={horarios}
-          passoMinutos={passoMinutos}
-          resolvidos={resolvidos}
-          hoje={hoje}
-          selecionadoId={selecionadoId}
-          onSelecionar={(id) =>
-            setSelecionadoId((atual) => (atual === id ? null : id))
-          }
-          onNovo={(dia, horario) => setFormularioAvulsa({ data: dia, horario })}
-        />
+        {visao === "mes" ? (
+          <MesGrade
+            mesReferencia={mesReferencia}
+            resolvidos={resolvidos}
+            hoje={hoje}
+            diaSelecionado={diaSelecionado}
+            selecionadoId={selecionadoId}
+            onSelecionar={(id) =>
+              setSelecionadoId((atual) => (atual === id ? null : id))
+            }
+          />
+        ) : (
+          <GradeHorarios
+            dias={dias}
+            horarios={horarios}
+            passoMinutos={passoMinutos}
+            resolvidos={resolvidos}
+            hoje={hoje}
+            selecionadoId={selecionadoId}
+            onSelecionar={(id) =>
+              setSelecionadoId((atual) => (atual === id ? null : id))
+            }
+            onNovo={(dia, horario) => setFormularioAvulsa({ data: dia, horario })}
+          />
+        )}
 
         {/*
           Lista do dia — o quadro da semana é bom pra enxergar ocupação, mas
