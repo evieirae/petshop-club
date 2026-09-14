@@ -8,6 +8,12 @@
 // ver a mesma cautela documentada em app/(app)/tutores/actions.ts
 // (paraDataLocal) sobre UTC deslocar o dia à noite no fuso do Brasil.
 
+// Visão do quadro da Agenda (Fase 1 de docs/plano-calendario-agenda-reui.md)
+// — vive aqui, não em page.tsx nem em AgendaSection.tsx, porque as duas
+// precisam do mesmo tipo: o Server Component pra decidir o range da busca,
+// o Client Component pra decidir o que renderizar (grade contínua ou mês).
+export type Visao = "mes" | "semana" | "dia";
+
 export function paraDataLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -45,6 +51,16 @@ export function inicioDoMes(dataISO: string): string {
 export function inicioDoMesSeguinte(dataISO: string): string {
   const d = dataLocalDeString(dataISO);
   return paraDataLocal(new Date(d.getFullYear(), d.getMonth() + 1, 1));
+}
+
+/** Dia 1 do mês `meses` à frente (negativo = pra trás) — usado pela
+ *  navegação "mês anterior/seguinte" da visão Mês (Fase 5). Sempre retorna
+ *  o dia 1, então não tem o problema de rollover de "31 de janeiro + 1 mês"
+ *  virar março: quem chama só precisa de uma data qualquer dentro do mês
+ *  de destino pra `inicioDoMes` calcular o range certo. */
+export function adicionarMeses(dataISO: string, meses: number): string {
+  const d = dataLocalDeString(dataISO);
+  return paraDataLocal(new Date(d.getFullYear(), d.getMonth() + meses, 1));
 }
 
 export const NOMES_DIA_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
