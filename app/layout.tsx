@@ -32,6 +32,10 @@ export const metadata: Metadata = {
   // O favicon vem de app/icon.svg (convenção do App Router) — mesmo símbolo
   // de components/brand/Logo.tsx.
   icons: { icon: "/icon.svg" },
+  // Verificação de domínio do Meta (Business Manager → Domínios).
+  other: {
+    "facebook-domain-verification": "6xkauhoffmqkm57hjzvyvkqpzj4wy6",
+  },
 };
 
 /**
