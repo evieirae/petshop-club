@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { createClient } from "@/lib/supabase/server";
-import { adicionarDias, dataLocalDeString, inicioDaSemana, paraDataLocal } from "@/lib/semana";
+import {
+  adicionarDias,
+  dataLocalDeString,
+  inicioDaSemana,
+  inicioDoMes,
+  inicioDoMesSeguinte,
+  paraDataLocal,
+} from "@/lib/semana";
 import type {
   Agendamento,
   Assinatura,
@@ -16,10 +23,17 @@ import { texto } from "@/lib/ui/styles";
 import { AgendaSection } from "./AgendaSection";
 import { PedidosSection } from "./PedidosSection";
 
+// Fase 1 de docs/plano-calendario-agenda-reui.md — a visão (Mês/Semana/Dia)
+// vira parâmetro de URL, do mesmo jeito que `data` já é hoje. Ainda não
+// existe UI pra trocar de visão nem pra Mês/Dia (isso são as fases
+// seguintes); isto só garante que a busca já traz o intervalo certo pra
+// cada uma, sem mudar o comportamento quando `visao` está ausente.
+type Visao = "mes" | "semana" | "dia";
+
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: { data?: string };
+  searchParams: { data?: string; visao?: string };
 }) {
   const contexto = await getUsuarioContext();
 
@@ -46,13 +60,28 @@ export default async function AgendaPage({
   // <Link> (AgendaSection.tsx) — sem mecanismo de fetch novo, o Server
   // Component já re-renderiza com o range certo a cada navegação.
   const diaSelecionado = searchParams.data ?? paraDataLocal(new Date());
+  const visao: Visao =
+    searchParams.visao === "mes" || searchParams.visao === "dia" ? searchParams.visao : "semana";
   const inicioSemana = inicioDaSemana(diaSelecionado);
   const fimSemanaExclusivo = adicionarDias(inicioSemana, 7);
+
+  // Intervalo de busca do quadro: dia único, semana (comportamento de hoje,
+  // inclusive quando `visao` está ausente) ou o mês corrente de
+  // `diaSelecionado`. Deliberadamente não busca os dias esmaecidos de
+  // meses vizinhos que aparecem na grade do Mês — ver seção 2 do plano.
+  const inicioIntervalo =
+    visao === "dia" ? diaSelecionado : visao === "mes" ? inicioDoMes(diaSelecionado) : inicioSemana;
+  const fimIntervaloExclusivo =
+    visao === "dia"
+      ? adicionarDias(diaSelecionado, 1)
+      : visao === "mes"
+        ? inicioDoMesSeguinte(diaSelecionado)
+        : fimSemanaExclusivo;
 
   // agendamentosAvulsosTodos e assinaturas (sem filtro de data) so entram
   // pra calcular "tutores sem agendamento ainda" — nao pra listar no quadro.
   const [
-    { data: agendamentosSemana },
+    { data: agendamentosPeriodo },
     { data: tutores },
     { data: pets },
     { data: servicos },
@@ -68,8 +97,8 @@ export default async function AgendaPage({
       .from("agendamentos")
       .select("*")
       .eq("petshop_id", petshopId)
-      .gte("data_hora", dataLocalDeString(inicioSemana).toISOString())
-      .lt("data_hora", dataLocalDeString(fimSemanaExclusivo).toISOString())
+      .gte("data_hora", dataLocalDeString(inicioIntervalo).toISOString())
+      .lt("data_hora", dataLocalDeString(fimIntervaloExclusivo).toISOString())
       .order("data_hora"),
     supabase.from("tutores").select("*").eq("petshop_id", petshopId).order("nome"),
     supabase.from("pets").select("*").eq("petshop_id", petshopId).order("nome"),
@@ -170,7 +199,7 @@ export default async function AgendaPage({
           expediente={expediente}
           diaSelecionado={diaSelecionado}
           inicioSemana={inicioSemana}
-          agendamentosSemana={(agendamentosSemana as Agendamento[]) ?? []}
+          agendamentosSemana={(agendamentosPeriodo as Agendamento[]) ?? []}
           tutores={(tutores as Tutor[]) ?? []}
           pets={(pets as Pet[]) ?? []}
           servicos={(servicos as Servico[]) ?? []}

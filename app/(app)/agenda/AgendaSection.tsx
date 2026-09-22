@@ -7,7 +7,6 @@ import {
   SeloRiscoFalta,
   type MapaHistoricoFalta,
 } from "@/components/agenda/SeloRiscoFalta";
-import { tomCores } from "@/lib/ui/styles";
 import Link from "next/link";
 import { createContext, useContext, useState, useTransition, type FormEvent } from "react";
 import type {
@@ -39,7 +38,6 @@ import {
   racaDoPet,
   resolverAgendamento,
   TERMINAIS,
-  TOM_STATUS,
   type ContextoNomes,
 } from "@/lib/agenda/resolver";
 import {
@@ -57,6 +55,7 @@ import {
   voltarStatusAgendamento,
   type ActionResult,
 } from "./actions";
+import { SemanaQuadro } from "./SemanaQuadro";
 
 // horarioLocal, dataLocalDoISO, racaDoPet, formatarHorario, TERMINAIS,
 // TOM_STATUS, ContextoNomes, AgendamentoResolvido e resolverAgendamento
@@ -237,85 +236,17 @@ export function AgendaSection({
           </div>
         )}
 
-        <div className="mt-4 overflow-x-auto rounded-xl border border-surface-border bg-surface-card">
-          <table className="w-full min-w-[760px] border-collapse text-sm">
-            <thead>
-              <tr>
-                <th className="w-16 border-b border-r border-surface-border bg-surface-muted p-2" />
-                {dias.map((dia) => (
-                  <th
-                    key={dia}
-                    className={`border-b border-surface-border p-2 text-center font-medium ${
-                      dia === hoje ? "bg-brand-50/60" : "bg-surface-card"
-                    }`}
-                  >
-                    <div className="text-xs font-normal text-ink-500">{nomeDiaSemana(dia)}</div>
-                    <div className="text-ink-900">{formatarDataCurta(dia)}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {horarios.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-6 text-center text-sm text-ink-500">
-                    Nenhum horário no expediente configurado — confira Configurações.
-                  </td>
-                </tr>
-              ) : (
-                horarios.map((horario) => (
-                  <tr key={horario}>
-                    <td className="border-b border-r border-surface-border p-2 align-top font-mono text-xs text-ink-500">
-                      {horario}
-                    </td>
-                    {dias.map((dia) => {
-                      const itens = grade.get(dia)?.get(horario) ?? [];
-                      return (
-                        <td
-                          key={dia}
-                          className={`border-b border-surface-border p-1 align-top ${
-                            dia === hoje ? "bg-brand-50/40" : ""
-                          }`}
-                        >
-                          <div className="flex flex-col gap-1">
-                            {itens.map((r) => (
-                              <button
-                                key={r.agendamento.id}
-                                type="button"
-                                onClick={() =>
-                                  setSelecionadoId((atual) =>
-                                    atual === r.agendamento.id ? null : r.agendamento.id
-                                  )
-                                }
-                                className={`truncate rounded px-1.5 py-1 text-left text-xs transition ${
-                                  tomCores[TOM_STATUS[r.agendamento.status]]
-                                } ${
-                                  selecionadoId === r.agendamento.id
-                                    ? "ring-2 ring-brand-500 ring-offset-1"
-                                    : ""
-                                }`}
-                                title={`${r.pet?.nome ?? "Pet removido"} (${racaDoPet(r.pet)}) · ${r.tutor?.nome ?? "Tutor removido"}`}
-                              >
-                                {r.pet?.nome ?? "Pet removido"}
-                              </button>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => setFormularioAvulsa({ data: dia, horario })}
-                              className="text-left text-[11px] text-ink-500 hover:text-brand-700"
-                            >
-                              + novo
-                            </button>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <SemanaQuadro
+          dias={dias}
+          horarios={horarios}
+          grade={grade}
+          hoje={hoje}
+          selecionadoId={selecionadoId}
+          onSelecionar={(id) =>
+            setSelecionadoId((atual) => (atual === id ? null : id))
+          }
+          onNovo={(dia, horario) => setFormularioAvulsa({ data: dia, horario })}
+        />
 
         {/*
           Lista do dia — o quadro da semana é bom pra enxergar ocupação, mas
