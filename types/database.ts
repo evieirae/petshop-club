@@ -192,8 +192,15 @@ export interface Tutor {
   senha_provisoria: boolean;
   senha_provisoria_expira_em: string | null;
   ultimo_login_em: string | null;
+  // Migration 0032 — coluna gerada (normalizar_telefone(telefone)), única
+  // por petshop: é o que impede tutor duplicado, venha de onde vier.
+  telefone_normalizado: string;
+  // Migration 0032 — de onde o cadastro nasceu. Nunca muda depois.
+  origem: OrigemTutor;
   criado_em: string;
 }
+
+export type OrigemTutor = "equipe" | "autocadastro" | "importacao";
 
 export type PapelContato = "agendamento" | "busca_entrega" | "cobranca";
 
@@ -661,6 +668,46 @@ export interface ResumoComissao {
   total_servicos: number;
   comissao_servicos: number;
   comissao_total: number;
+}
+
+// Importação por planilha (Frente C — ver supabase/migrations/0032_importacao_planilha.sql).
+export type EntidadeImportacao = "tutores_pets" | "servicos" | "produtos" | "assinaturas" | "agendamentos";
+export type StatusImportacao = "analisando" | "pronta" | "aplicando" | "aplicada" | "falhou" | "desfeita";
+export type SituacaoLinhaImportacao = "nova" | "duplicada" | "erro" | "aplicada" | "ignorada";
+
+export interface Importacao {
+  id: string;
+  petshop_id: string;
+  entidade: EntidadeImportacao;
+  arquivo_nome: string;
+  arquivo_tipo: "xlsx" | "csv";
+  status: StatusImportacao;
+  // chave do campo → cabeçalho da planilha que valeu na conferência
+  mapeamento: Record<string, string | null>;
+  total_linhas: number;
+  linhas_novas: number;
+  linhas_duplicadas: number;
+  linhas_erro: number;
+  mensagem_erro: string | null;
+  criado_por: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  aplicada_em: string | null;
+  desfeita_em: string | null;
+}
+
+export interface ImportacaoLinha {
+  id: string;
+  importacao_id: string;
+  petshop_id: string;
+  numero_linha: number;
+  dados_brutos: Record<string, string>;
+  // Formato depende da entidade — tutores_pets: ver DadosTutorPet em
+  // lib/importacao/tutoresPets.ts. Null quando situacao = 'erro'.
+  dados_normalizados: unknown;
+  situacao: SituacaoLinhaImportacao;
+  erro: string | null;
+  avisos: string[];
 }
 
 // Placeholder generico — mantem os clientes tipaveis sem travar em tudo

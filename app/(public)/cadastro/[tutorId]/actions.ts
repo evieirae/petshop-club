@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ehTelefoneDuplicado } from "@/lib/supabase/erros";
 
 // Rota publica, sem sessao — ver lib/supabase/admin.ts pra entender por que
 // isso usa a service_role key em vez do cliente normal (RLS exige
@@ -84,6 +85,15 @@ export async function enviarCadastro(
     .eq("id", tutorId);
 
   if (erroTutor) {
+    // Telefone de OUTRO cadastro do mesmo petshop (índice único da 0032).
+    // Mensagem para o tutor, não para a equipe: ele não tem como resolver
+    // sozinho, e não deve ver de quem é o outro cadastro.
+    if (ehTelefoneDuplicado(erroTutor)) {
+      return {
+        ok: false,
+        erro: "Esse telefone já está em outro cadastro deste petshop. Fale com o petshop para juntar os cadastros.",
+      };
+    }
     console.error("Erro ao salvar tutor (form publico de cadastro):", erroTutor);
     return { ok: false, erro: ERRO_GENERICO };
   }

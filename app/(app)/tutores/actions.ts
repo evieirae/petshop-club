@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { ERRO_TELEFONE_DUPLICADO, ehTelefoneDuplicado } from "@/lib/supabase/erros";
 import type { FormaPagamento, PapelContato } from "@/types/database";
 
 // Estados de agendamento que ainda não chegaram a um resultado final — são os
@@ -47,6 +48,7 @@ export async function criarTutor(
     .single();
 
   if (error || !data) {
+    if (ehTelefoneDuplicado(error)) return { ok: false, erro: ERRO_TELEFONE_DUPLICADO };
     console.error("Erro ao criar tutor:", error);
     return { ok: false, erro: ERRO_GENERICO };
   }
@@ -99,6 +101,7 @@ export async function atualizarTutor(
     .eq("id", tutorId);
 
   if (error) {
+    if (ehTelefoneDuplicado(error)) return { ok: false, erro: ERRO_TELEFONE_DUPLICADO };
     console.error("Erro ao atualizar tutor:", error);
     return { ok: false, erro: ERRO_GENERICO };
   }

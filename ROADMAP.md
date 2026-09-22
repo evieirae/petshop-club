@@ -385,3 +385,41 @@ Sem tela de convite por e-mail (não há SMTP configurado no projeto ainda):
 o cadastro de dono novo gera uma senha temporária mostrada uma única vez
 na tela, pro admin repassar manualmente — mesmo espírito do link de
 cadastro de tutor (Fase 3).
+
+## Fase 9 — Loja pública, pagamentos com split e importação por planilha
+
+Pedido do Eduardo (19/set/2026). A migração Supabase→Postgres
+(`docs/plano-migracao-supabase-para-postgres.md`) fica **pausada**, não
+cancelada. Plano completo em
+`docs/plano-loja-publica-pagamentos-import.md`.
+
+- [ ] **Frente A — o site do petshop** (escopo ampliado em 20/set: deixou de
+      ser vitrine e virou site próprio, destino de anúncio): subdomínio por
+      petshop (`pagani.petshopclube.com.br`, exige migrar os nameservers do
+      domínio para a Vercel), páginas institucionais e página por produto e
+      serviço, cadastro público que já libera compra e pré-marcação, **pet
+      que nasce aguardando confirmação do petshop**, pedido de estranho que
+      **não segura a vaga** e tem prazo de resposta, e avaliações de
+      clientes. `68–94 h`.
+- [ ] **Frente B — pagamento com split**: fatia 0 comparando Asaas, Mercado
+      Pago e Pagar.me — desta vez medindo **prazo de liquidação do cartão**,
+      não só taxa. Depois: camada de abstração de gateway, onboarding do
+      recebedor, checkout da loja e teste em produção. `58–78 h`.
+- [ ] **Frente C — importação por planilha**: tutores/pets, serviços,
+      produtos, assinaturas e agendamentos futuros, com conferência antes de
+      aplicar e desfazer lote. `46–62 h`.
+
+Decisões tomadas junto com o plano: receita volta a ser **fee fixo +
+percentual só nas cobranças processadas pela plataforma**; a **taxa de
+transação é somada ao tutor** (mantém a decisão de 16/ago/2026, seção 1c de
+`docs/fase6_pagamentos.md`) e a **antecipação é paga por quem quer receber
+antes** — cada lado antecipa a própria parte; a importação de agenda cobre
+**agendamentos futuros e assinaturas**, sem histórico.
+
+Fatia 0 iniciada em 19–20/set: `docs/fatia0-gateways-comparativo.md`
+(resultado parcial), `docs/fatia0-perguntas-suporte.md` (o que só o
+fornecedor responde) e `scripts/fatia0/` (testes executáveis).
+
+Pendência registrada: pixel do Meta e tag do Google ficaram **fora** do
+escopo da Frente A — sem eles o petshop anuncia sem medir conversão. São
+6–8 h e entram depois sem refazer nada.
