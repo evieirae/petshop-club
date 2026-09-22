@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUsuarioContext } from "@/lib/auth/getContext";
 import { createClient } from "@/lib/supabase/server";
 import type { Assinatura, ContatoAdicional, Pet, Plano, Porte, Tutor } from "@/types/database";
-import { texto } from "@/lib/ui/styles";
+import { botao, texto } from "@/lib/ui/styles";
 import { TutoresSection } from "./TutoresSection";
 
 export default async function TutoresPage() {
@@ -54,11 +55,18 @@ export default async function TutoresPage() {
 
   return (
     <div>
-      <h1 className={texto.tituloPagina}>Tutores & Pets</h1>
-      <p className={texto.subtitulo}>
-        Cadastro, contatos por papel e link de autopreenchimento — ver
-        docs/regras_padrao_petshop.md, seção 6.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className={texto.tituloPagina}>Tutores & Pets</h1>
+          <p className={texto.subtitulo}>
+            Cadastro, contatos por papel e link de autopreenchimento — ver
+            docs/regras_padrao_petshop.md, seção 6.
+          </p>
+        </div>
+        <Link href="/importar" className={botao({ variante: "contorno", tamanho: "sm" })}>
+          Importar planilha
+        </Link>
+      </div>
 
       <div className="mt-8">
         <TutoresSection

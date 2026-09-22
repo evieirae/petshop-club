@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Wallet,
   ShoppingBag,
+  FileUp,
 } from "lucide-react";
 import { cx } from "@/lib/ui/styles";
 
@@ -37,6 +38,9 @@ const ITENS = [
   // Fase 6 (docs/fase6_pagamentos.md) — rascunho, só funciona depois da
   // migration 0006 ser aplicada de verdade (ver aviso na própria página).
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  // Frente C (docs/plano-loja-publica-pagamentos-import.md): importação
+  // por planilha. Uso raro depois da entrada do petshop, por isso no fim.
+  { href: "/importar", label: "Importar", icon: FileUp },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 

@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ERRO_TELEFONE_DUPLICADO, ehTelefoneDuplicado } from "@/lib/supabase/erros";
 import { getAdminContext } from "@/lib/auth/getAdminContext";
 import { senhaInicialTutor } from "@/lib/auth/senhaTutor";
 import { enviarEmail } from "@/lib/email/resend";
@@ -358,7 +359,10 @@ export async function criarTutorComAcesso(
     // Mesmo cuidado de criarPetshopComDono: não deixar login órfão, sem
     // tutor nenhum atrás, pendurado no Auth.
     await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-    return { ok: false, erro: ERRO_GENERICO };
+    return {
+      ok: false,
+      erro: ehTelefoneDuplicado(erroTutor) ? ERRO_TELEFONE_DUPLICADO : ERRO_GENERICO,
+    };
   }
 
   // E-mail de boas-vindas com a senha temporária + link de completar
